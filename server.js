@@ -2,17 +2,28 @@ const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
+const basicAuth = require('express-basic-auth'); // Nova dependência: npm install express-basic-auth
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Conexão usando variáveis de ambiente (padrão no EasyPanel e node-postgres)
-const pool = new Pool();  // Automaticamente usa PGHOST, PGUSER, etc.
+// Conexão com PostgreSQL (já configurada via env vars)
+const pool = new Pool();
 
 const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUÍDO'];
 
+// Autenticação básica para admin (mude para sua senha real)
+const getUnauthorizedResponse = (req) => {
+  return req.auth ? ('Credenciais inválidas para ' + req.auth.user) : 'Autenticação requerida';
+};
+const adminAuth = basicAuth({
+  users: { 'admin': 'sua_senha_segura_aqui' }, // Adicione mais usuários se precisar
+  unauthorizedResponse: getUnauthorizedResponse
+});
+
+// Rota para buscar pedidos (pública, usada por ambas as views)
 app.get('/api/pedidos', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -28,28 +39,40 @@ app.get('/api/pedidos', async (req, res) => {
   }
 });
 
-app.post('/api/update-status', async (req, res) => {
+// Rota para atualizar status (protegida por auth)
+app.post('/api/update-status', adminAuth, async (req, res) => {
   const { id, novoStatus } = req.body;
-
   if (!STATUS_POSSIVEIS.includes(novoStatus)) {
     return res.status(400).json({ error: 'Status inválido' });
   }
-
   try {
     const result = await pool.query(
       `UPDATE fsf_pedido SET status = $1 WHERE id = $2 RETURNING id, status`,
       [novoStatus, id]
     );
-
     if (result.rowCount === 0) {
       return res.status(404).json({ error: 'Pedido não encontrado' });
     }
-
     res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao atualizar status' });
   }
+});
+
+// Página admin (protegida por auth) - serve index.html com setas
+app.get('/admin', adminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// Página cliente (pública) - serve cliente.html sem setas
+app.get('/cliente', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
+});
+
+// Redireciona raiz para cliente (opcional)
+app.get('/', (req, res) => {
+  res.redirect('/cliente');
 });
 
 const PORT = process.env.PORT || 3000;
