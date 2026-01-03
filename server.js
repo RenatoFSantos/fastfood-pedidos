@@ -6,20 +6,13 @@ const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // para servir o HTML
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Configuração da conexão com PostgreSQL
-const pool = new Pool({
-  user: 'postgres',
-  host: 'painel.midilabs.com.br',
-  database: 'fastfood', // altere para o nome do seu banco
-  password: '76abb9fc75c8845923a6',
-  port: 55432,
-});
+// Conexão usando variáveis de ambiente (padrão no EasyPanel e node-postgres)
+const pool = new Pool();  // Automaticamente usa PGHOST, PGUSER, etc.
 
 const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUÍDO'];
 
-// Rota para buscar todos os pedidos relevantes (os que estão em um dos 3 status)
 app.get('/api/pedidos', async (req, res) => {
   try {
     const result = await pool.query(`
@@ -35,7 +28,6 @@ app.get('/api/pedidos', async (req, res) => {
   }
 });
 
-// Rota para atualizar o status do pedido
 app.post('/api/update-status', async (req, res) => {
   const { id, novoStatus } = req.body;
 
@@ -60,7 +52,7 @@ app.post('/api/update-status', async (req, res) => {
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });
