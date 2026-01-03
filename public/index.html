@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Pedidos - Fast Food</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
+        .container { display: flex; justify-content: space-around; gap: 20px; }
+        .column { width: 30%; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .column h2 { text-align: center; margin-bottom: 15px; color: #333; }
+        .column ul { list-style: none; padding: 0; min-height: 200px; }
+        .column li { 
+            background: #eee; margin-bottom: 10px; padding: 12px; border-radius: 5px; 
+            display: flex; justify-content: center; align-items: center; 
+        }
+        .column li:hover { background: #ddd; }
+        .arrow { cursor: pointer; padding: 0 15px; font-size: 1.5em; user-select: none; }
+        .arrow.disabled { color: #ccc; cursor: not-allowed; }
+        .order-num { font-weight: bold; font-size: 1.1em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="column">
+            <h2>AGUARDANDO PREPARO</h2>
+            <ul id="list1"></ul>
+        </div>
+        <div class="column">
+            <h2>EM PREPARO</h2>
+            <ul id="list2"></ul>
+        </div>
+        <div class="column">
+            <h2>CONCLUÍDO</h2>
+            <ul id="list3"></ul>
+        </div>
+    </div>
+
+    <script>
+        const statuses = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUÍDO'];
+        let orders = [];
+
+        const lists = [
+            document.getElementById('list1'),
+            document.getElementById('list2'),
+            document.getElementById('list3')
+        ];
+
+        async function carregarPedidos() {
+            try {
+                const response = await fetch('/api/pedidos');
+                orders = await response.json();
+                render();
+            } catch (err) {
+                console.error('Erro ao carregar pedidos:', err);
+            }
+        }
+
+        function render() {
+            lists.forEach(list => list.innerHTML = '');
+
+            orders.forEach(order => {
+                const index = statuses.indexOf(order.status);
+                if (index === -1) return;
+
+                const li = document.createElement('li');
+                li.dataset.id = order.id;
+
+                // Seta esquerda
+                const leftArrow = document.createElement('span');
+                leftArrow.className = 'arrow';
+                leftArrow.innerHTML = '◄';
+                if (index === 0) leftArrow.classList.add('disabled');
+                leftArrow.addEventListener('click', () => moverEsquerda(order.id));
+
+                // Número do pedido
+                const orderNum = document.createElement('span');
+                orderNum.className = 'order-num';
+                orderNum.textContent = `Pedido ${order.id}`;
+
+                // Seta direita
+                const rightArrow = document.createElement('span');
+                rightArrow.className = 'arrow';
+                rightArrow.innerHTML = '►';
+                if (index === statuses.length - 1) rightArrow.classList.add('disabled');
+                rightArrow.addEventListener('click', () => moverDireita(order.id));
+
+                li.appendChild(leftArrow);
+                li.appendChild(orderNum);
+                li.appendChild(rightArrow);
+
+                lists[index].appendChild(li);
+            });
+        }
+
+        async function moverEsquerda(id) {
+            const order = orders.find(o => o.id === id);
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex <= 0) return;
+
+            const novoStatus = statuses[currentIndex - 1];
+            await atualizarStatus(id, novoStatus);
+        }
+
+        async function moverDireita(id) {
+            const order = orders.find(o => o.id === id);
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex >= statuses.length - 1) return;
+
+            const novoStatus = statuses[currentIndex + 1];
+            await atualizarStatus(id, novoStatus);
+        }
+
+        async function atualizarStatus(id, novoStatus) {
+            try {
+                const response = await fetch('/api/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, novoStatus })
+                });
+
+                if (response.ok) {
+                    const updated = await response.json();
+                    const order = orders.find(o => o.id === id);
+                    order.status = updated.status;
+                    render();
+                } else {
+                    alert('Erro ao atualizar o status');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Erro de conexão');
+            }
+        }
+
+        // Atualiza a cada 10 segundos (opcional – para novos pedidos aparecerem automaticamente)
+        carregarPedidos();
+        setInterval(carregarPedidos, 10000);
+    </script>
+</body>
+</html>
