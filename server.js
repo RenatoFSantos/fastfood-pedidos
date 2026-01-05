@@ -27,6 +27,8 @@ const adminAuth = basicAuth({
 
 // Rota para buscar pedidos (pública, usada por ambas as views)
 app.get('/api/pedidos', async (req, res) => {
+  // Força o Content-Type para JSON para evitar problemas de renderização
+  res.setHeader('Content-Type', 'application/json');
   try {
     const result = await pool.query(`
       SELECT id, status 
@@ -36,8 +38,8 @@ app.get('/api/pedidos', async (req, res) => {
     `);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Erro ao buscar pedidos' });
+    console.error('Erro ao buscar pedidos:',err);
+    res.status(500).json({ error: 'Erro interno ao buscar pedidos' });
   }
 });
 
