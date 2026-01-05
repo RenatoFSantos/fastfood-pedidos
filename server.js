@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Conexão com PostgreSQL (já configurada via env vars)
 const pool = new Pool();
 
-const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUÍDO'];
+const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
 
 // Autenticação básica para admin (mude para sua senha real)
 const getUnauthorizedResponse = (req) => {
@@ -33,7 +33,7 @@ app.get('/api/pedidos', async (req, res) => {
     const result = await pool.query(`
       SELECT id, status 
       FROM fsf_pedido 
-      WHERE status IN ('AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUÍDO')
+      WHERE status IN ('AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO')
       ORDER BY id
     `);
     res.json(result.rows);
