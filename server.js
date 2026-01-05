@@ -19,7 +19,7 @@ const getUnauthorizedResponse = (req) => {
   return req.auth ? ('Credenciais inválidas para ' + req.auth.user) : 'Autenticação requerida';
 };
 const adminAuth = basicAuth({
-  users: { 'admin': 'sua_senha_segura_aqui' }, // Adicione mais usuários se precisar
+  users: { 'admin': 'fastfood2026' }, // Adicione mais usuários se precisar
   unauthorizedResponse: getUnauthorizedResponse
 });
 
