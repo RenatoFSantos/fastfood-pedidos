@@ -20,6 +20,8 @@ const getUnauthorizedResponse = (req) => {
 };
 const adminAuth = basicAuth({
   users: { 'admin': 'fastfood2026' }, // Adicione mais usuários se precisar
+  challenge: true,                  // <--- ESSA LINHA É OBRIGATÓRIA
+  realm: 'Painel Administrativo - Fast Food', // texto que aparece na janela de login
   unauthorizedResponse: getUnauthorizedResponse
 });
 
