@@ -31,7 +31,7 @@ app.get('/api/pedidos', async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   try {
     const result = await pool.query(`
-      SELECT id, status 
+      SELECT id, data, cliente, nome, endereco, total, status, step
       FROM fsf_pedido 
       WHERE status IN ('AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO')
       ORDER BY id
@@ -40,6 +40,33 @@ app.get('/api/pedidos', async (req, res) => {
   } catch (err) {
     console.error('Erro ao buscar pedidos:',err);
     res.status(500).json({ error: 'Erro interno ao buscar pedidos' });
+  }
+});
+
+// Itens de um pedido (protegida por auth - usado no admin.html para o accordion)
+app.get('/api/pedidos/:id/itens', adminAuth, async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+
+  const pedidoId = Number(req.params.id);
+  if (!Number.isFinite(pedidoId)) {
+    return res.status(400).json({ error: 'ID de pedido inválido' });
+  }
+
+  try {
+    // Observação: assumimos que a FK se chama "pedido_id" (mais comum).
+    // Se no seu banco for outro nome (ex.: "id_pedido"), ajuste a query.
+    const result = await pool.query(
+      `SELECT id, data, produto, preco, quantidade, status, pedido_id
+       FROM fsf_pedido_item
+       WHERE pedido_id = $1
+       ORDER BY id ASC`,
+      [pedidoId]
+    );
+
+    res.json({ pedidoId, itens: result.rows });
+  } catch (err) {
+    console.error('Erro ao buscar itens do pedido:', err);
+    res.status(500).json({ error: 'Erro interno ao buscar itens do pedido' });
   }
 });
 

@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Pedidos - Fast Food</title>
     <style>
-        body {
+        html, body {
             font-family: Arial, sans-serif;
             margin: 0;
+            height: 100%;
+        }
+
+        body {
             padding: 20px;
+            box-sizing: border-box;
+            height: 100vh;
+            overflow: hidden; /* sem barras de rolagem vertical */
 
             /* Background pattern (repeat, keep original tile size) */
             background-color: #f4f4f4;
@@ -16,13 +23,86 @@
             background-repeat: repeat;
             background-position: top left;
         }
-        .container { display: flex; justify-content: space-around; gap: 20px; }
-        .column { width: 30%; background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);  }
+
+        /* Layout full-height */
+        .page {
+            height: calc(100vh - 40px); /* desconta padding do body (20 + 20) */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex: 1;
+            min-height: 0; /* permite flex children encolherem */
+        }
+
+        .column {
+            width: 30%;
+            background: rgba(255,255,255,0.96);
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
         .column h2 { text-align: center; margin-bottom: 15px; color: #333; }
-        .column ul { list-style: none; padding: 0; min-height: 100vh; }
-        .column li { 
-            background: #eee; margin-bottom: 10px; padding: 12px; border-radius: 5px; 
-            display: flex; justify-content: center; align-items: center; 
+        .column ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden; /* sem scroll vertical */
+        }
+
+        .column li {
+            background: #eee;
+            margin-bottom: 10px;
+            padding: 12px;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .order-details {
+            display: none;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .order-details.open {
+            display: block;
+        }
+
+        .items {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .items li {
+            margin: 6px 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            display: list-item;
+            user-select: text;
         }
         .column li:hover { background: #ddd; }
         .arrow { cursor: pointer; padding: 0 15px; font-size: 1.5em; user-select: none; }
@@ -34,21 +114,23 @@
     </style>
 </head>
 <body>
-    <div class="titulo, column-title">
-        <h1>Lista de Pedidos - Alhadas Burger</h1>
-    </div>
-    <div class="container">
-        <div class="column">
-            <h2>AGUARDANDO PREPARO</h2>
-            <ul id="list1"></ul>
+    <div class="page">
+        <div class="titulo column-title">
+            <h1>Lista de Pedidos - Alhadas Burger</h1>
         </div>
-        <div class="column">
-            <h2>EM PREPARO</h2>
-            <ul id="list2"></ul>
-        </div>
-        <div class="column">
-            <h2>CONCLUÍDO</h2>
-            <ul id="list3"></ul>
+        <div class="container">
+            <div class="column">
+                <h2>AGUARDANDO PREPARO</h2>
+                <ul id="list1"></ul>
+            </div>
+            <div class="column">
+                <h2>EM PREPARO</h2>
+                <ul id="list2"></ul>
+            </div>
+            <div class="column">
+                <h2>CONCLUÍDO</h2>
+                <ul id="list3"></ul>
+            </div>
         </div>
     </div>
 
@@ -82,12 +164,19 @@
                 const li = document.createElement('li');
                 li.dataset.id = order.id;
 
+                // Cabeçalho clicável do pedido (accordion)
+                const header = document.createElement('div');
+                header.className = 'order-header';
+
                 // Seta esquerda
                 const leftArrow = document.createElement('span');
                 leftArrow.className = 'arrow';
                 leftArrow.innerHTML = '◄';
                 if (index === 0) leftArrow.classList.add('disabled');
-                leftArrow.addEventListener('click', () => moverEsquerda(order.id));
+                leftArrow.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    moverEsquerda(order.id);
+                });
 
                 // Número do pedido
                 const orderNum = document.createElement('span');
@@ -99,14 +188,110 @@
                 rightArrow.className = 'arrow';
                 rightArrow.innerHTML = '►';
                 if (index === statuses.length - 1) rightArrow.classList.add('disabled');
-                rightArrow.addEventListener('click', () => moverDireita(order.id));
+                rightArrow.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    moverDireita(order.id);
+                });
 
-                li.appendChild(leftArrow);
-                li.appendChild(orderNum);
-                li.appendChild(rightArrow);
+                header.appendChild(leftArrow);
+                header.appendChild(orderNum);
+                header.appendChild(rightArrow);
+
+                // Conteúdo do accordion (itens do pedido)
+                const details = document.createElement('div');
+                details.className = 'order-details';
+                details.innerHTML = '<em>Carregando itens...</em>';
+
+                // Clique no pedido (exceto setas) abre/fecha accordion
+                header.addEventListener('click', async () => {
+                    await toggleAccordion(li, details, order.id);
+                });
+
+                li.appendChild(header);
+                li.appendChild(details);
 
                 lists[index].appendChild(li);
             });
+        }
+
+        async function toggleAccordion(li, detailsEl, pedidoId) {
+            const isOpen = detailsEl.classList.contains('open');
+
+            // Fecha
+            if (isOpen) {
+                detailsEl.classList.remove('open');
+                return;
+            }
+
+            // Se ainda não carregou, busca no backend
+            if (!li.dataset.itemsLoaded) {
+                detailsEl.innerHTML = '<em>Carregando itens...</em>';
+                detailsEl.classList.add('open');
+
+                try {
+                    const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
+                    if (!resp.ok) throw new Error('Falha ao buscar itens');
+                    const data = await resp.json();
+
+                    const itens = Array.isArray(data.itens) ? data.itens : [];
+
+                    if (!itens.length) {
+                        detailsEl.innerHTML = '<em>Pedido sem itens.</em>';
+                        li.dataset.itemsLoaded = '1';
+                        return;
+                    }
+
+                    // Render: tenta usar campos comuns; se não existirem, mostra JSON.
+                    const ul = document.createElement('ul');
+                    ul.className = 'items';
+
+                    const fmtBRL = (v) => {
+                        const n = Number(v);
+                        if (!Number.isFinite(n)) return '';
+                        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+                    };
+
+                    for (const item of itens) {
+                        // De acordo com a tabela fsf_pedido_item:
+                        // produto, preco, quantidade, status, data, pedido_id
+                        const produto = item.produto ?? '';
+                        const qtdRaw = item.quantidade;
+                        const precoRaw = item.preco;
+
+                        const qtdNum = Number(qtdRaw);
+                        const precoNum = Number(precoRaw);
+
+                        const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
+                        const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
+
+                        let subtotalTxt = '';
+                        if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
+                            subtotalTxt = fmtBRL(qtdNum * precoNum);
+                        }
+
+                        const text = [
+                            qtdTxt !== '' ? `${qtdTxt} x` : null,
+                            produto || null,
+                            precoTxt ? `— ${precoTxt}` : null,
+                            subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
+                        ].filter(Boolean).join(' ');
+
+                        const liItem = document.createElement('li');
+                        liItem.textContent = text || JSON.stringify(item);
+                        ul.appendChild(liItem);
+                    }
+
+                    detailsEl.innerHTML = '';
+                    detailsEl.appendChild(ul);
+                    li.dataset.itemsLoaded = '1';
+                } catch (err) {
+                    console.error(err);
+                    detailsEl.innerHTML = '<em>Erro ao carregar itens do pedido.</em>';
+                }
+            }
+
+            // Abre
+            detailsEl.classList.add('open');
         }
 
         async function moverEsquerda(id) {
