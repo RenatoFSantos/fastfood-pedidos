@@ -28,11 +28,13 @@
         .arrow { cursor: pointer; padding: 0 15px; font-size: 1.5em; user-select: none; }
         .arrow.disabled { color: #ccc; cursor: not-allowed; }
         .order-num { font-weight: bold; font-size: 3.1em; }
-        .titulo { display: flex; justify-content: center; align-items: center; }
+        .titulo { display: flex; justify-content: center; align-items: center;}
+        .column-title { background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px;  }
+        .column-title h1 { text-align: center; }
     </style>
 </head>
 <body>
-    <div class="titulo">
+    <div class="titulo, column-title">
         <h1>Lista de Pedidos - Alhadas Burger</h1>
     </div>
     <div class="container">
