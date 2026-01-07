@@ -122,30 +122,40 @@
         }
         #list1.aguardando > li {
             margin-bottom: 0;              /* gap controla espaçamento */
-            height: var(--order-collapsed-height, 92px);
+            height: auto;
+            min-height: var(--order-collapsed-height, 92px);
             width: var(--order-card-width, 100%);
             overflow: hidden;
+            box-sizing: border-box;
         }
         #list1.aguardando > li .order-details {
             display: none; /* só mostra quando expandido */
         }
         #list1.aguardando > li.expanded {
-            position: absolute;
-            inset: 0;
+            position: relative;   /* em fluxo, permite reorganizar os demais */
+            inset: auto;
             z-index: 50;
             height: auto;
-            width: 100%;
-            overflow: hidden;
+            width: 90%;
+            max-width: 90%;
+            flex-basis: 90%;
+            overflow: visible;
+            order: -1;            /* coloca o expandido no topo da lista */
         }
         #list1.aguardando > li.expanded .order-header {
             cursor: default;
         }
         #list1.aguardando > li.expanded .order-details {
             display: block;
-            flex: 1;
-            overflow-y: auto;  /* rolagem só dentro do detalhe, se necessário */
-            max-height: calc(100% - 56px);
+            flex: 0 0 auto;
+            overflow: visible; /* sem scroll, cresce com o conteúdo */
+            max-height: none;
         }
+        
+        #list1.aguardando.expanded-mode {
+            overflow: visible; /* permite o pedido expandido crescer sem ser cortado pelo UL */
+        }
+
         #list1.aguardando.expanded-mode > li:not(.expanded) {
             opacity: 0.25;
             pointer-events: none; /* evita clique nos outros enquanto um está em foco */
@@ -283,10 +293,6 @@
 
         function render() {
             lists.forEach(list => list.innerHTML = '');
-
-            // Segurança: se a tela foi re-renderizada enquanto um pedido estava expandido,
-            // remove o modo 'expanded-mode' para não travar a coluna.
-            if (listAguardando) listAguardando.classList.remove('expanded-mode');
 
             orders.forEach(order => {
                 const index = statuses.indexOf(order.status);
