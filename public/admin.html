@@ -5,17 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle de Pedidos - Fast Food</title>
     <style>
-        html, body {
+        body {
             font-family: Arial, sans-serif;
             margin: 0;
-            height: 100%;
-        }
-
-        body {
             padding: 20px;
-            box-sizing: border-box;
-            height: 100vh;
-            overflow: hidden; /* sem barras de rolagem vertical */
 
             /* Background pattern (repeat, keep original tile size) */
             background-color: #f4f4f4;
@@ -23,186 +16,39 @@
             background-repeat: repeat;
             background-position: top left;
         }
-
-        /* Layout full-height */
-        .page {
-            height: calc(100vh - 40px); /* desconta padding do body (20 + 20) */
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .container {
-            display: flex;
-            justify-content: space-around;
-            gap: 20px;
-            flex: 1;
-            min-height: 0; /* permite flex children encolherem */
-        }
-
-        .column {
-            width: 30%;
-            background: rgba(255,255,255,0.96);
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-        }
+        .container { display: flex; justify-content: space-around; gap: 20px; }
+        .column { width: 30%; background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);  }
         .column h2 { text-align: center; margin-bottom: 15px; color: #333; }
-        .column ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            flex: 1;
-            min-height: 0;
-            overflow: hidden; /* sem scroll vertical */
-        }
-
-        .column li {
-            background: #eee;
-            margin-bottom: 10px;
-            padding: 12px;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            user-select: none;
-        }
-
-        .order-header {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        .order-details {
-            display: none;
-            background: rgba(255,255,255,0.85);
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 10px;
-        }
-
-        .order-details.open {
-            display: block;
-        }
-
-        .items {
-            margin: 0;
-            padding-left: 18px;
-        }
-
-        .items li {
-            margin: 6px 0;
-            padding: 0;
-            background: transparent;
-            border-radius: 0;
-            display: list-item;
-            user-select: text;
+        .column ul { list-style: none; padding: 0; min-height: 100vh; }
+        .column li { 
+            background: #eee; margin-bottom: 10px; padding: 12px; border-radius: 5px; 
+            display: flex; justify-content: center; align-items: center; 
         }
         .column li:hover { background: #ddd; }
         .arrow { cursor: pointer; padding: 0 15px; font-size: 1.5em; user-select: none; }
-        .arrow.disabled { color: #ccc; cursor: not-allowed; pointer-events: none; }
+        .arrow.disabled { color: #ccc; cursor: not-allowed; }
         .order-num { font-weight: bold; font-size: 3.1em; }
         .titulo { display: flex; justify-content: center; align-items: center;}
         .column-title { background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px;  }
         .column-title h1 { text-align: center; }
-
-        /* --- AGUARDANDO PREPARO: layout em colunas (top->bottom e depois ao lado) --- */
-        #list1.aguardando {
-            position: relative;
-            display: flex;
-            flex-flow: column wrap; /* preenche de cima para baixo e depois quebra para a direita */
-            align-content: flex-start;
-            gap: 12px;
-        }
-        #list1.aguardando > li {
-            margin-bottom: 0;              /* gap controla espaçamento */
-            height: auto;
-            min-height: var(--order-collapsed-height, 92px);
-            width: var(--order-card-width, 100%);
-            overflow: hidden;
-            box-sizing: border-box;
-        }
-        #list1.aguardando > li .order-details {
-            display: none; /* só mostra quando expandido */
-        }
-        #list1.aguardando > li.expanded {
-            position: relative;   /* em fluxo, permite reorganizar os demais */
-            inset: auto;
-            z-index: 50;
-            height: auto;
-            width: 90%;
-            max-width: 90%;
-            flex-basis: 90%;
-            overflow: visible;
-            order: -1;            /* coloca o expandido no topo da lista */
-        }
-        #list1.aguardando > li.expanded .order-header {
-            cursor: default;
-        }
-        #list1.aguardando > li.expanded .order-details {
-            display: block;
-            flex: 0 0 auto;
-            overflow: visible; /* sem scroll, cresce com o conteúdo */
-            max-height: none;
-        }
-        
-        #list1.aguardando.expanded-mode {
-            overflow: visible; /* permite o pedido expandido crescer sem ser cortado pelo UL */
-        }
-
-        #list1.aguardando.expanded-mode > li:not(.expanded) {
-            opacity: 0.25;
-            pointer-events: none; /* evita clique nos outros enquanto um está em foco */
-        }
-
-        .close-btn {
-            position: absolute;
-            right: 12px;
-            top: 10px;
-            font-size: 1.2em;
-            cursor: pointer;
-            padding: 6px 10px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            background: rgba(255,255,255,0.9);
-            user-select: none;
-            display: none;
-        }
-        li.expanded .close-btn { display: inline-block; }
-
-        /* Itens do pedido: apenas quantidade + produto (fonte maior) */
-        .items li {
-            font-size: 1.5em;
-            font-weight: 600;
-            line-height: 1.4;
-        }
-
     </style>
 </head>
 <body>
-    <div class="page">
-        <div class="titulo column-title">
-            <h1>Lista de Pedidos - Alhadas Burger</h1>
+    <div class="titulo, column-title">
+        <h1>Lista de Pedidos - Alhadas Burger</h1>
+    </div>
+    <div class="container">
+        <div class="column">
+            <h2>AGUARDANDO PREPARO</h2>
+            <ul id="list1"></ul>
         </div>
-        <div class="container">
-            <div class="column">
-                <h2>AGUARDANDO PREPARO</h2>
-                <ul id="list1" class="orders-list aguardando"></ul>
-            </div>
-            <div class="column">
-                <h2>EM PREPARO</h2>
-                <ul id="list2"></ul>
-            </div>
-            <div class="column">
-                <h2>CONCLUÍDO</h2>
-                <ul id="list3"></ul>
-            </div>
+        <div class="column">
+            <h2>EM PREPARO</h2>
+            <ul id="list2"></ul>
+        </div>
+        <div class="column">
+            <h2>CONCLUÍDO</h2>
+            <ul id="list3"></ul>
         </div>
     </div>
 
@@ -210,76 +56,11 @@
         const statuses = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
         let orders = [];
 
-        // Cache em memória dos itens por pedido (evita refetch a cada render)
-        const itemsCache = new Map(); // pedidoId -> { items: Array, fetchedAt: number }
-        const ITEMS_CACHE_TTL_MS = 15000;
-
         const lists = [
             document.getElementById('list1'),
             document.getElementById('list2'),
             document.getElementById('list3')
-        ]
-
-        const listAguardando = document.getElementById('list1');
-
-        function updateAguardandoLayout() {
-            if (!listAguardando) return;
-            // Se estiver expandido, não recalcula largura (overlay)
-            if (listAguardando.classList.contains('expanded-mode')) return;
-
-            const cards = Array.from(listAguardando.children).filter(li => !li.classList.contains('expanded'));
-            if (cards.length === 0) return;
-
-            const listH = listAguardando.clientHeight;
-            const styles = getComputedStyle(listAguardando);
-            const gap = parseFloat(styles.gap || '12') || 12;
-
-            // Altura do card colapsado (CSS variable ou fallback)
-            const collapsedH = parseFloat(getComputedStyle(cards[0]).height) || 92;
-
-            const rows = Math.max(1, Math.floor((listH + gap) / (collapsedH + gap)));
-            const cols = Math.max(1, Math.ceil(cards.length / rows));
-
-            // Largura calculada por coluna
-            const totalGap = (cols - 1) * gap;
-            const widthPx = (listAguardando.clientWidth - totalGap) / cols;
-
-            for (const li of cards) {
-                li.style.width = `${Math.max(120, widthPx)}px`;
-                li.style.height = `${collapsedH}px`;
-            }
-        }
-
-        let resizeTimer = null;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(updateAguardandoLayout, 120);
-        });
-
-        async function expandAguardando(li, detailsEl, pedidoId) {
-            // fecha qualquer outro expandido
-            const current = listAguardando.querySelector('li.expanded');
-            if (current && current !== li) {
-                current.classList.remove('expanded');
-                const det = current.querySelector('.order-details');
-                if (det) det.classList.remove('open');
-            }
-
-            listAguardando.classList.add('expanded-mode');
-            li.classList.add('expanded');
-            detailsEl.classList.add('open');
-            await ensureItemsVisible(detailsEl, pedidoId);
-        }
-
-        function collapseAguardando(li, detailsEl) {
-            li.classList.remove('expanded');
-            detailsEl.classList.remove('open');
-            listAguardando.classList.remove('expanded-mode');
-
-            // Recalcula layout dos cards colapsados
-            setTimeout(updateAguardandoLayout, 0);
-        }
-
+        ];
 
         async function carregarPedidos() {
             try {
@@ -292,7 +73,9 @@
         }
 
         function render() {
-            lists.forEach(list => list.innerHTML = '');
+            // Ao re-renderizar, sempre remove o expanded-mode para evitar travamento
+            clearAguardandoExpanded();
+lists.forEach(list => list.innerHTML = '');
 
             orders.forEach(order => {
                 const index = statuses.indexOf(order.status);
@@ -301,19 +84,12 @@
                 const li = document.createElement('li');
                 li.dataset.id = order.id;
 
-                // Cabeçalho clicável do pedido (accordion)
-                const header = document.createElement('div');
-                header.className = 'order-header';
-
                 // Seta esquerda
                 const leftArrow = document.createElement('span');
                 leftArrow.className = 'arrow';
                 leftArrow.innerHTML = '◄';
                 if (index === 0) leftArrow.classList.add('disabled');
-                leftArrow.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    moverEsquerda(order.id);
-                });
+                leftArrow.addEventListener('click', () => moverEsquerda(order.id));
 
                 // Número do pedido
                 const orderNum = document.createElement('span');
@@ -325,144 +101,14 @@
                 rightArrow.className = 'arrow';
                 rightArrow.innerHTML = '►';
                 if (index === statuses.length - 1) rightArrow.classList.add('disabled');
-                rightArrow.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    moverDireita(order.id);
-                });
+                rightArrow.addEventListener('click', () => moverDireita(order.id));
 
-                header.appendChild(leftArrow);
-                header.appendChild(orderNum);
-                header.appendChild(rightArrow);
-
-                // Conteúdo do accordion (itens do pedido)
-                const details = document.createElement('div');
-                details.className = 'order-details';
-                details.innerHTML = '<em>Carregando itens...</em>';
-
-                
-                // Botão de fechar (apenas para AGUARDANDO, quando expandido)
-                const closeBtn = document.createElement('span');
-                closeBtn.className = 'close-btn';
-                closeBtn.textContent = '✕';
-                closeBtn.title = 'Fechar';
-                closeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    collapseAguardando(li, details);
-                });
-
-                header.appendChild(closeBtn);
-
-                // Clique no pedido (exceto setas)
-                // - EM PREPARO: itens sempre visíveis (sem accordion)
-                // - AGUARDANDO PREPARO: ao clicar, expande para ocupar a coluna toda
-                // - CONCLUIDO: mantém accordion normal
-                if (order.status === 'AGUARDANDO PREPARO') {
-                    header.addEventListener('click', async () => {
-                        const isExpanded = li.classList.contains('expanded');
-                        if (isExpanded) {
-                            collapseAguardando(li, details);
-                            return;
-                        }
-                        await expandAguardando(li, details, order.id);
-                    });
-                } else if (order.status !== 'EM PREPARO') {
-                    header.addEventListener('click', async () => {
-                        await toggleAccordion(li, details, order.id);
-                    });
-                }
-
-                li.appendChild(header);
-                li.appendChild(details);
-
-                // Em "EM PREPARO", mantém itens sempre visíveis
-                if (order.status === 'EM PREPARO') {
-                    details.classList.add('open');
-                    // carrega itens automaticamente (usa cache)
-                    ensureItemsVisible(details, order.id);
-                }
+                li.appendChild(leftArrow);
+                li.appendChild(orderNum);
+                li.appendChild(rightArrow);
 
                 lists[index].appendChild(li);
-
-
             });
-
-            // Recalcula layout especial da coluna AGUARDANDO
-            updateAguardandoLayout();
-        }
-
-        async function fetchPedidoItens(pedidoId) {
-            const key = String(pedidoId);
-            const now = Date.now();
-            const cached = itemsCache.get(key);
-            if (cached && (now - cached.fetchedAt) < ITEMS_CACHE_TTL_MS) {
-                return cached.items;
-            }
-
-            const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
-            if (!resp.ok) throw new Error('Falha ao buscar itens');
-            const items = await resp.json();
-
-            itemsCache.set(key, { items, fetchedAt: now });
-            return items;
-        }
-
-
-        function renderPedidoItens(detailsEl, itens) {
-            if (!Array.isArray(itens) || itens.length === 0) {
-                detailsEl.innerHTML = '<em>Nenhum item encontrado.</em>';
-                return;
-            }
-
-            const ul = document.createElement('ul');
-            ul.className = 'items';
-
-            for (const item of itens) {
-                const produto = (item.produto ?? '').toString();
-                const qtdNum = Number(item.quantidade);
-                const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (item.quantidade ?? '').toString();
-
-                const liItem = document.createElement('li');
-                liItem.textContent = `${qtdTxt ? `${qtdTxt}x ` : ''}${produto}`.trim() || JSON.stringify(item);
-                ul.appendChild(liItem);
-            }
-
-            detailsEl.innerHTML = '';
-            detailsEl.appendChild(ul);
-        }
-
-        async function ensureItemsVisible(detailsEl, pedidoId) {
-            // Evita refazer o mesmo carregamento em paralelo
-            if (detailsEl.dataset.loading === '1') return;
-
-            // Se já tem conteúdo renderizado, não precisa recarregar aqui
-            if (detailsEl.dataset.rendered === '1') return;
-
-            detailsEl.dataset.loading = '1';
-            detailsEl.innerHTML = '<em>Carregando itens...</em>';
-
-            try {
-                const itens = await fetchPedidoItens(pedidoId);
-                renderPedidoItens(detailsEl, itens);
-                detailsEl.dataset.rendered = '1';
-            } catch (err) {
-                console.error(err);
-                detailsEl.innerHTML = '<em>Erro ao carregar itens.</em>';
-            } finally {
-                detailsEl.dataset.loading = '0';
-            }
-        }
-
-        async function toggleAccordion(li, detailsEl, pedidoId) {
-            const isOpen = detailsEl.classList.contains('open');
-
-            // Fecha
-            if (isOpen) {
-                detailsEl.classList.remove('open');
-                return;
-            }
-
-            detailsEl.classList.add('open');
-            await ensureItemsVisible(detailsEl, pedidoId);
         }
 
         async function moverEsquerda(id) {
@@ -485,7 +131,10 @@
 
         async function atualizarStatus(id, novoStatus) {
             try {
-                const response = await fetch('/api/update-status', {
+                // Se estiver em modo expandido na coluna 1, limpa antes de mover/atualizar
+            clearAguardandoExpanded();
+
+            const response = await fetch('/api/update-status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, novoStatus })
