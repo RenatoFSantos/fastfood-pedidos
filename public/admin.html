@@ -103,9 +103,6 @@
             border-radius: 0;
             display: list-item;
             user-select: text;
-            font-size: 1.5em;
-            font-weight: 600;
-            line-height: 1.4;            
         }
         .column li:hover { background: #ddd; }
         .arrow { cursor: pointer; padding: 0 15px; font-size: 1.5em; user-select: none; }
@@ -114,6 +111,68 @@
         .titulo { display: flex; justify-content: center; align-items: center;}
         .column-title { background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px;  }
         .column-title h1 { text-align: center; }
+
+        /* --- AGUARDANDO PREPARO: layout em colunas (top->bottom e depois ao lado) --- */
+        #list1.aguardando {
+            position: relative;
+            display: flex;
+            flex-flow: column wrap; /* preenche de cima para baixo e depois quebra para a direita */
+            align-content: flex-start;
+            gap: 12px;
+        }
+        #list1.aguardando > li {
+            margin-bottom: 0;              /* gap controla espaçamento */
+            height: var(--order-collapsed-height, 92px);
+            width: var(--order-card-width, 100%);
+            overflow: hidden;
+        }
+        #list1.aguardando > li .order-details {
+            display: none; /* só mostra quando expandido */
+        }
+        #list1.aguardando > li.expanded {
+            position: absolute;
+            inset: 0;
+            z-index: 50;
+            height: auto;
+            width: 100%;
+            overflow: hidden;
+        }
+        #list1.aguardando > li.expanded .order-header {
+            cursor: default;
+        }
+        #list1.aguardando > li.expanded .order-details {
+            display: block;
+            flex: 1;
+            overflow-y: auto;  /* rolagem só dentro do detalhe, se necessário */
+            max-height: calc(100% - 56px);
+        }
+        #list1.aguardando.expanded-mode > li:not(.expanded) {
+            opacity: 0.25;
+            pointer-events: none; /* evita clique nos outros enquanto um está em foco */
+        }
+
+        .close-btn {
+            position: absolute;
+            right: 12px;
+            top: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            background: rgba(255,255,255,0.9);
+            user-select: none;
+            display: none;
+        }
+        li.expanded .close-btn { display: inline-block; }
+
+        /* Itens do pedido: apenas quantidade + produto (fonte maior) */
+        .items li {
+            font-size: 1.5em;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
     </style>
 </head>
 <body>
@@ -124,7 +183,7 @@
         <div class="container">
             <div class="column">
                 <h2>AGUARDANDO PREPARO</h2>
-                <ul id="list1"></ul>
+                <ul id="list1" class="orders-list aguardando"></ul>
             </div>
             <div class="column">
                 <h2>EM PREPARO</h2>
@@ -149,7 +208,68 @@
             document.getElementById('list1'),
             document.getElementById('list2'),
             document.getElementById('list3')
-        ];
+        ]
+
+        const listAguardando = document.getElementById('list1');
+
+        function updateAguardandoLayout() {
+            if (!listAguardando) return;
+            // Se estiver expandido, não recalcula largura (overlay)
+            if (listAguardando.classList.contains('expanded-mode')) return;
+
+            const cards = Array.from(listAguardando.children).filter(li => !li.classList.contains('expanded'));
+            if (cards.length === 0) return;
+
+            const listH = listAguardando.clientHeight;
+            const styles = getComputedStyle(listAguardando);
+            const gap = parseFloat(styles.gap || '12') || 12;
+
+            // Altura do card colapsado (CSS variable ou fallback)
+            const collapsedH = parseFloat(getComputedStyle(cards[0]).height) || 92;
+
+            const rows = Math.max(1, Math.floor((listH + gap) / (collapsedH + gap)));
+            const cols = Math.max(1, Math.ceil(cards.length / rows));
+
+            // Largura calculada por coluna
+            const totalGap = (cols - 1) * gap;
+            const widthPx = (listAguardando.clientWidth - totalGap) / cols;
+
+            for (const li of cards) {
+                li.style.width = `${Math.max(120, widthPx)}px`;
+                li.style.height = `${collapsedH}px`;
+            }
+        }
+
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(updateAguardandoLayout, 120);
+        });
+
+        async function expandAguardando(li, detailsEl, pedidoId) {
+            // fecha qualquer outro expandido
+            const current = listAguardando.querySelector('li.expanded');
+            if (current && current !== li) {
+                current.classList.remove('expanded');
+                const det = current.querySelector('.order-details');
+                if (det) det.classList.remove('open');
+            }
+
+            listAguardando.classList.add('expanded-mode');
+            li.classList.add('expanded');
+            detailsEl.classList.add('open');
+            await ensureItemsVisible(detailsEl, pedidoId);
+        }
+
+        function collapseAguardando(li, detailsEl) {
+            li.classList.remove('expanded');
+            detailsEl.classList.remove('open');
+            listAguardando.classList.remove('expanded-mode');
+
+            // Recalcula layout dos cards colapsados
+            setTimeout(updateAguardandoLayout, 0);
+        }
+
 
         async function carregarPedidos() {
             try {
@@ -159,14 +279,6 @@
             } catch (err) {
                 console.error('Erro ao carregar pedidos:', err);
             }
-        }
-
-        function fmtBRL(valor) {
-            if (valor === null || valor === undefined) return 'R$ 0,00';
-            return Number(valor).toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            });
         }
 
         function render() {
@@ -217,13 +329,38 @@
                 details.className = 'order-details';
                 details.innerHTML = '<em>Carregando itens...</em>';
 
-                // Clique no pedido (exceto setas) abre/fecha accordion
-                // Regra: em "EM PREPARO" os itens ficam sempre visíveis (sem efeito de accordion)
-                if (order.status !== 'EM PREPARO') {
+                
+                // Botão de fechar (apenas para AGUARDANDO, quando expandido)
+                const closeBtn = document.createElement('span');
+                closeBtn.className = 'close-btn';
+                closeBtn.textContent = '✕';
+                closeBtn.title = 'Fechar';
+                closeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    collapseAguardando(li, details);
+                });
+
+                header.appendChild(closeBtn);
+
+                // Clique no pedido (exceto setas)
+                // - EM PREPARO: itens sempre visíveis (sem accordion)
+                // - AGUARDANDO PREPARO: ao clicar, expande para ocupar a coluna toda
+                // - CONCLUIDO: mantém accordion normal
+                if (order.status === 'AGUARDANDO PREPARO') {
+                    header.addEventListener('click', async () => {
+                        const isExpanded = li.classList.contains('expanded');
+                        if (isExpanded) {
+                            collapseAguardando(li, details);
+                            return;
+                        }
+                        await expandAguardando(li, details, order.id);
+                    });
+                } else if (order.status !== 'EM PREPARO') {
                     header.addEventListener('click', async () => {
                         await toggleAccordion(li, details, order.id);
                     });
                 }
+
                 li.appendChild(header);
                 li.appendChild(details);
 
@@ -236,7 +373,11 @@
 
                 lists[index].appendChild(li);
 
+
             });
+
+            // Recalcula layout especial da coluna AGUARDANDO
+            updateAguardandoLayout();
         }
 
         async function fetchPedidoItens(pedidoId) {
@@ -249,13 +390,12 @@
 
             const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
             if (!resp.ok) throw new Error('Falha ao buscar itens');
-            const data = await resp.json();
-            // Backend pode retornar diretamente um array OU um objeto {itens:[...]}
-            const items = Array.isArray(data) ? data : (Array.isArray(data?.itens) ? data.itens : []);
+            const items = await resp.json();
 
             itemsCache.set(key, { items, fetchedAt: now });
             return items;
         }
+
 
         function renderPedidoItens(detailsEl, itens) {
             if (!Array.isArray(itens) || itens.length === 0) {
@@ -267,30 +407,12 @@
             ul.className = 'items';
 
             for (const item of itens) {
-                const produto = item.produto ?? '';
-                const qtdRaw = item.quantidade;
-                const precoRaw = item.preco;
-
-                const qtdNum = Number(qtdRaw);
-                const precoNum = Number(precoRaw);
-
-                const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
-                const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
-
-                let subtotalTxt = '';
-                if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
-                    subtotalTxt = fmtBRL(qtdNum * precoNum);
-                }
-
-                const text = [
-                    qtdTxt !== '' ? `${qtdTxt} x` : null,
-                    produto || null,
-                    // precoTxt ? `— ${precoTxt}` : null,
-                    // subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
-                ].filter(Boolean).join(' ');
+                const produto = (item.produto ?? '').toString();
+                const qtdNum = Number(item.quantidade);
+                const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (item.quantidade ?? '').toString();
 
                 const liItem = document.createElement('li');
-                liItem.textContent = text || JSON.stringify(item);
+                liItem.textContent = `${qtdTxt ? `${qtdTxt}x ` : ''}${produto}`.trim() || JSON.stringify(item);
                 ul.appendChild(liItem);
             }
 
