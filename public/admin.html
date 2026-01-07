@@ -275,51 +275,52 @@
 
         // comportamento por coluna
         if (order.status === STATUS.AGUARDANDO) {
-        // Clique abre/fecha (somente nesta coluna)
-        li.addEventListener('click', async () => {
-            const id = Number(order.id);
-            const list = lists.aguardando;
+            // Clique abre/fecha (somente nesta coluna)
+            li.addEventListener('click', async () => {
+                const id = Number(order.id);
+                const list = lists.aguardando;
 
-            // se clicou no mesmo, fecha
-            if (expandedAguardandoId === id && li.classList.contains('expanded')) {
-            expandedAguardandoId = null;
-            clearAguardandoExpanded();
-            return;
-            }
-
-            const ul = document.createElement('ul');
-            ul.className = 'items';
-
-            for (const item of itens) {
-                const produto = item.produto ?? '';
-                const qtdRaw = item.quantidade;
-                const precoRaw = item.preco;
-
-                const qtdNum = Number(qtdRaw);
-                const precoNum = Number(precoRaw);
-
-                const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
-                const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
-
-                let subtotalTxt = '';
-                if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
-                    subtotalTxt = fmtBRL(qtdNum * precoNum);
+                // se clicou no mesmo, fecha
+                if (expandedAguardandoId === id && li.classList.contains('expanded')) {
+                expandedAguardandoId = null;
+                clearAguardandoExpanded();
+                return;
                 }
 
-                const text = [
-                    qtdTxt !== '' ? `${qtdTxt} x` : null,
-                    produto || null,
-                    // precoTxt ? `— ${precoTxt}` : null,
-                    // subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
-                ].filter(Boolean).join(' ');
+                const ul = document.createElement('ul');
+                ul.className = 'items';
 
-                const liItem = document.createElement('li');
-                liItem.textContent = text || JSON.stringify(item);
-                ul.appendChild(liItem);
-            }
+                for (const item of itens) {
+                    const produto = item.produto ?? '';
+                    const qtdRaw = item.quantidade;
+                    const precoRaw = item.preco;
 
-            detailsEl.innerHTML = '';
-            detailsEl.appendChild(ul);
+                    const qtdNum = Number(qtdRaw);
+                    const precoNum = Number(precoRaw);
+
+                    const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
+                    const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
+
+                    let subtotalTxt = '';
+                    if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
+                        subtotalTxt = fmtBRL(qtdNum * precoNum);
+                    }
+
+                    const text = [
+                        qtdTxt !== '' ? `${qtdTxt} x` : null,
+                        produto || null,
+                        // precoTxt ? `— ${precoTxt}` : null,
+                        // subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
+                    ].filter(Boolean).join(' ');
+
+                    const liItem = document.createElement('li');
+                    liItem.textContent = text || JSON.stringify(item);
+                    ul.appendChild(liItem);
+                }
+
+                detailsEl.innerHTML = '';
+                detailsEl.appendChild(ul);
+            })
         }
 
         async function ensureItemsVisible(detailsEl, pedidoId) {
@@ -328,18 +329,18 @@
 
             // carrega itens e injeta
             try {
-            const items = await fetchItems(id);
-            renderItemsInto(li, items);
+                const items = await fetchItems(id);
+                renderItemsInto(li, items);
             } catch (err) {
-            console.error(err);
-            renderItemsInto(li, []);
-            const box = li.querySelector('.order-items');
-            if (box) {
-                box.firstChild.textContent = 'Erro ao carregar itens.';
+                console.error(err);
+                renderItemsInto(li, []);
+                const box = li.querySelector('.order-items');
+                if (box) {
+                    box.firstChild.textContent = 'Erro ao carregar itens.';
+                }
             }
-            }
-        });
-        }
+        };
+        
 
         return li;
     }
