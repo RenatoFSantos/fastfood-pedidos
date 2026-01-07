@@ -106,7 +106,7 @@
         }
         .column li:hover { background: #ddd; }
         .arrow { cursor: pointer; padding: 0 15px; font-size: 1.5em; user-select: none; }
-        .arrow.disabled { color: #ccc; cursor: not-allowed; }
+        .arrow.disabled { color: #ccc; cursor: not-allowed; pointer-events: none; }
         .order-num { font-weight: bold; font-size: 3.1em; }
         .titulo { display: flex; justify-content: center; align-items: center;}
         .column-title { background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px;  }
@@ -283,6 +283,10 @@
 
         function render() {
             lists.forEach(list => list.innerHTML = '');
+
+            // Segurança: se a tela foi re-renderizada enquanto um pedido estava expandido,
+            // remove o modo 'expanded-mode' para não travar a coluna.
+            if (listAguardando) listAguardando.classList.remove('expanded-mode');
 
             orders.forEach(order => {
                 const index = statuses.indexOf(order.status);
