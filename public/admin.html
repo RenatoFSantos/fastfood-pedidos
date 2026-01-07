@@ -32,6 +32,29 @@
         .column-title { background: rgba(255,255,255,0.96); border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 15px;  }
         .column-title h1 { text-align: center; }
     </style>
+
+    <style id="overrides-admin-fixes">
+    /* Overrides para layout 100% tela e comportamento por coluna */
+    .column { overflow: hidden; }
+    .column ul { list-style: none; padding: 0; margin: 0; min-height: 0 !important; height: 100%; flex: 1; overflow: hidden; }
+
+    /* Estrutura do pedido */
+    .order-header { display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; }
+    .column li { flex-direction: column; align-items: stretch; justify-content: flex-start; cursor: default; }
+    .arrow.disabled { pointer-events: none; opacity: 0.3; }
+
+    .order-items { margin-top: 10px; background: #fff; border-radius: 6px; padding: 10px; width: 100%; box-sizing: border-box; }
+    .order-item-text { font-size: 1.5em; font-weight: 600; line-height: 1.4; }
+
+    /* Coluna 1: AGUARDANDO PREPARO - enfileirar topo->base, depois ao lado */
+    #list1 { display: flex; flex-flow: column wrap; align-content: flex-start; gap: 12px; }
+    #list1 li { flex: 0 0 auto; min-height: 92px; cursor: pointer; }
+
+    /* Expandir na coluna 1 */
+    #list1.expanded-mode li.disabled { opacity: 0.35; pointer-events: none; }
+    #list1.expanded-mode li.expanded { width: 90%; flex: 0 0 90%; align-self: flex-start; cursor: default; }
+    </style>
+
 </head>
 <body>
     <div class="titulo, column-title">
@@ -53,135 +76,304 @@
     </div>
 
     <script>
-        const statuses = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
-        let orders = [];
 
-        const lists = [
-            document.getElementById('list1'),
-            document.getElementById('list2'),
-            document.getElementById('list3')
-        ];
+        (() => {
+    const STATUS = {
+        AGUARDANDO: 'AGUARDANDO PREPARO',
+        PREPARO: 'EM PREPARO',
+        CONCLUIDO: 'CONCLUIDO',
+    };
 
+    const statuses = [STATUS.AGUARDANDO, STATUS.PREPARO, STATUS.CONCLUIDO];
 
-        // Reseta completamente qualquer estado de expansão/disable na coluna AGUARDANDO PREPARO (list1)
-        function clearAguardandoExpanded() {
-            const list1 = document.getElementById('list1');
-            if (!list1) return;
+    const lists = {
+        aguardando: document.getElementById('list1'),
+        preparo: document.getElementById('list2'),
+        concluido: document.getElementById('list3'),
+    };
 
-            // Remove modo expandido do container
-            list1.classList.remove('expanded-mode');
+    let orders = [];
+    let expandedAguardandoId = null;
 
-            // Remove classes e estilos inline que podem travar cliques
-            const lis = list1.querySelectorAll('li');
-            lis.forEach(li => {
-                li.classList.remove('expanded', 'disabled');
-                li.style.pointerEvents = '';
-                li.style.width = '';
-                li.style.height = '';
-                li.style.flex = '';
-                li.style.alignSelf = '';
-            });
+    // Cache simples para itens (evita flood no backend)
+    const itemsCache = new Map(); // id -> { ts, items }
+    const ITEMS_TTL_MS = 15000;
 
-            // Remove blocos de itens/detalhes que possam ter sido injetados
-            list1.querySelectorAll('.order-items, .items, .pedido-itens, .itens, .details, .accordion, .accordion-content')
-                .forEach(el => el.remove());
+    function normalizeItemsPayload(data) {
+        if (Array.isArray(data)) return data;
+        if (data && Array.isArray(data.itens)) return data.itens;
+        return [];
+    }
+
+    async function fetchItems(pedidoId) {
+        const now = Date.now();
+        const cached = itemsCache.get(pedidoId);
+        if (cached && (now - cached.ts) < ITEMS_TTL_MS) return cached.items;
+
+        const resp = await fetch(`/api/pedidos/${pedidoId}/itens`, { cache: 'no-store' });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status} ao buscar itens`);
+        const data = await resp.json();
+        const items = normalizeItemsPayload(data);
+        itemsCache.set(pedidoId, { ts: now, items });
+        return items;
+    }
+
+    function clearChildren(el) {
+        while (el.firstChild) el.removeChild(el.firstChild);
+    }
+
+    function clearAguardandoExpanded() {
+        const list = lists.aguardando;
+        if (!list) return;
+        list.classList.remove('expanded-mode');
+        list.querySelectorAll('li').forEach(li => {
+        li.classList.remove('expanded', 'disabled');
+        li.style.pointerEvents = '';
+        // remove bloco de itens se existir
+        li.querySelectorAll('.order-items').forEach(x => x.remove());
+        });
+    }
+
+    function setAguardandoExpanded(li, pedidoId) {
+        const list = lists.aguardando;
+        expandedAguardandoId = pedidoId;
+
+        list.classList.add('expanded-mode');
+        li.classList.add('expanded');
+
+        // desabilita demais
+        list.querySelectorAll('li').forEach(other => {
+        if (other !== li) other.classList.add('disabled');
+        });
+    }
+
+    function clearAguardandoExpandedKeepId() {
+        // mantém expandedAguardandoId (usado quando mover seta chama render e queremos limpar visual)
+        const keep = expandedAguardandoId;
+        clearAguardandoExpanded();
+        expandedAguardandoId = keep;
+    }
+
+    function renderItemsInto(li, items) {
+        // remove anterior
+        li.querySelectorAll('.order-items').forEach(x => x.remove());
+
+        const box = document.createElement('div');
+        box.className = 'order-items';
+
+        if (!items || items.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'order-item-text';
+        empty.textContent = 'Nenhum item encontrado.';
+        box.appendChild(empty);
+        } else {
+        items.forEach(it => {
+            const row = document.createElement('div');
+            row.className = 'order-item-text';
+            const q = (it.quantidade ?? 0);
+            const qtd = (typeof q === 'string' ? Number(q) : q);
+            row.textContent = `${Number.isFinite(qtd) ? qtd : q}x ${it.produto ?? ''}`.trim();
+            box.appendChild(row);
+        });
         }
 
-        async function carregarPedidos() {
-            try {
-                const response = await fetch('/api/pedidos');
-                orders = await response.json();
-                render();
-            } catch (err) {
-                console.error('Erro ao carregar pedidos:', err);
+        li.appendChild(box);
+    }
+
+    function makeOrderLI(order, colIndex) {
+        const li = document.createElement('li');
+        li.dataset.id = order.id;
+
+        // header
+        const header = document.createElement('div');
+        header.className = 'order-header';
+
+        const leftArrow = document.createElement('span');
+        leftArrow.className = 'arrow';
+        leftArrow.textContent = '◄';
+        if (colIndex === 0) leftArrow.classList.add('disabled');
+
+        const orderNum = document.createElement('span');
+        orderNum.className = 'order-num';
+        orderNum.textContent = `${order.id}`;
+
+        const rightArrow = document.createElement('span');
+        rightArrow.className = 'arrow';
+        rightArrow.textContent = '►';
+        if (colIndex === statuses.length - 1) rightArrow.classList.add('disabled');
+
+        header.appendChild(leftArrow);
+        header.appendChild(orderNum);
+        header.appendChild(rightArrow);
+        li.appendChild(header);
+
+        // setas
+        leftArrow.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        // ao mover, limpa expansão para não travar
+        expandedAguardandoId = null;
+        clearAguardandoExpanded();
+        await moverEsquerda(order.id);
+        });
+
+        rightArrow.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        expandedAguardandoId = null;
+        clearAguardandoExpanded();
+        await moverDireita(order.id);
+        });
+
+        // comportamento por coluna
+        if (order.status === STATUS.AGUARDANDO) {
+        // Clique abre/fecha (somente nesta coluna)
+        li.addEventListener('click', async () => {
+            const id = Number(order.id);
+            const list = lists.aguardando;
+
+            // se clicou no mesmo, fecha
+            if (expandedAguardandoId === id && li.classList.contains('expanded')) {
+            expandedAguardandoId = null;
+            clearAguardandoExpanded();
+            return;
             }
-        }
 
-        function render() {
-            // Ao re-renderizar, sempre remove o expanded-mode para evitar travamento
+            // fecha qualquer outro
             clearAguardandoExpanded();
-lists.forEach(list => list.innerHTML = '');
+            setAguardandoExpanded(li, id);
 
-            orders.forEach(order => {
-                const index = statuses.indexOf(order.status);
-                if (index === -1) return;
-
-                const li = document.createElement('li');
-                li.dataset.id = order.id;
-
-                // Seta esquerda
-                const leftArrow = document.createElement('span');
-                leftArrow.className = 'arrow';
-                leftArrow.innerHTML = '◄';
-                if (index === 0) leftArrow.classList.add('disabled');
-                leftArrow.addEventListener('click', () => moverEsquerda(order.id));
-
-                // Número do pedido
-                const orderNum = document.createElement('span');
-                orderNum.className = 'order-num';
-                orderNum.textContent = `${order.id}`;
-
-                // Seta direita
-                const rightArrow = document.createElement('span');
-                rightArrow.className = 'arrow';
-                rightArrow.innerHTML = '►';
-                if (index === statuses.length - 1) rightArrow.classList.add('disabled');
-                rightArrow.addEventListener('click', () => moverDireita(order.id));
-
-                li.appendChild(leftArrow);
-                li.appendChild(orderNum);
-                li.appendChild(rightArrow);
-
-                lists[index].appendChild(li);
-            });
-        }
-
-        async function moverEsquerda(id) {
-            const order = orders.find(o => o.id === id);
-            const currentIndex = statuses.indexOf(order.status);
-            if (currentIndex <= 0) return;
-
-            const novoStatus = statuses[currentIndex - 1];
-            await atualizarStatus(id, novoStatus);
-        }
-
-        async function moverDireita(id) {
-            const order = orders.find(o => o.id === id);
-            const currentIndex = statuses.indexOf(order.status);
-            if (currentIndex >= statuses.length - 1) return;
-
-            const novoStatus = statuses[currentIndex + 1];
-            await atualizarStatus(id, novoStatus);
-        }
-
-        async function atualizarStatus(id, novoStatus) {
+            // carrega itens e injeta
             try {
-                // Se estiver em modo expandido na coluna 1, limpa antes de mover/atualizar
-            clearAguardandoExpanded();
-
-                const response = await fetch('/api/update-status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, novoStatus })
-                });
-
-                if (response.ok) {
-                    const updated = await response.json();
-                    const order = orders.find(o => o.id === id);
-                    order.status = updated.status;
-                    render();
-                } else {
-                    alert('Erro ao atualizar o status');
-                }
+            const items = await fetchItems(id);
+            renderItemsInto(li, items);
             } catch (err) {
+            console.error(err);
+            renderItemsInto(li, []);
+            const box = li.querySelector('.order-items');
+            if (box) {
+                box.firstChild.textContent = 'Erro ao carregar itens.';
+            }
+            }
+        });
+        }
+
+        return li;
+    }
+
+    async function ensureItemsVisiblePreparo(li, pedidoId) {
+        // Coluna EM PREPARO: sempre visível, sem accordion
+        try {
+        const items = await fetchItems(pedidoId);
+        renderItemsInto(li, items);
+        } catch (err) {
+        console.error(err);
+        renderItemsInto(li, []);
+        const box = li.querySelector('.order-items');
+        if (box) box.firstChild.textContent = 'Erro ao carregar itens.';
+        }
+    }
+
+    function render() {
+        // guarda qual pedido estava expandido, e reabre depois do render
+        const keepExpanded = expandedAguardandoId;
+
+        // Limpa listas
+        clearChildren(lists.aguardando);
+        clearChildren(lists.preparo);
+        clearChildren(lists.concluido);
+
+        // Ordena por id crescente (ajuste se preferir por data)
+        const sorted = [...orders].sort((a,b) => Number(a.id) - Number(b.id));
+
+        for (const order of sorted) {
+        const idx = statuses.indexOf(order.status);
+        if (idx === -1) continue;
+
+        const li = makeOrderLI(order, idx);
+
+        if (order.status === STATUS.AGUARDANDO) {
+            lists.aguardando.appendChild(li);
+        } else if (order.status === STATUS.PREPARO) {
+            lists.preparo.appendChild(li);
+            // mostra itens automaticamente
+            ensureItemsVisiblePreparo(li, Number(order.id));
+        } else {
+            lists.concluido.appendChild(li);
+            // (mantém sem accordion aqui por enquanto — pode adicionar se quiser)
+        }
+        }
+
+        // Reabre o expandido (se ainda existir e estiver em aguardando)
+        expandedAguardandoId = null;
+        clearAguardandoExpanded();
+        if (keepExpanded != null) {
+        const li = lists.aguardando.querySelector(`li[data-id="${keepExpanded}"]`);
+        if (li) {
+            expandedAguardandoId = Number(keepExpanded);
+            setAguardandoExpanded(li, Number(keepExpanded));
+            fetchItems(Number(keepExpanded))
+            .then(items => renderItemsInto(li, items))
+            .catch(err => {
                 console.error(err);
-                alert('Erro de conexão');
-            }
+                renderItemsInto(li, []);
+                const box = li.querySelector('.order-items');
+                if (box) box.firstChild.textContent = 'Erro ao carregar itens.';
+            });
         }
+        }
+    }
 
-        // Atualiza a cada 10 segundos (opcional – para novos pedidos aparecerem automaticamente)
-        carregarPedidos();
-        setInterval(carregarPedidos, 5000);
+    async function carregarPedidos() {
+        try {
+        const response = await fetch('/api/pedidos', { cache: 'no-store' });
+        orders = await response.json();
+        render();
+        } catch (err) {
+        console.error('Erro ao carregar pedidos:', err);
+        }
+    }
+
+    async function atualizarStatus(id, novoStatus) {
+        try {
+        const response = await fetch(`/api/pedidos/${id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: novoStatus })
+        });
+
+        if (response.ok) {
+            const updated = await response.json();
+            const order = orders.find(o => o.id === id);
+            if (order) order.status = updated.status;
+            // limpamos qualquer expansão ao atualizar status
+            expandedAguardandoId = null;
+            clearAguardandoExpanded();
+            render();
+        } else {
+            alert('Erro ao atualizar o status');
+        }
+        } catch (err) {
+        console.error(err);
+        alert('Erro de conexão');
+        }
+    }
+
+    async function moverEsquerda(id) {
+        const order = orders.find(o => o.id === id);
+        const currentIndex = statuses.indexOf(order.status);
+        if (currentIndex <= 0) return;
+        await atualizarStatus(id, statuses[currentIndex - 1]);
+    }
+
+    async function moverDireita(id) {
+        const order = orders.find(o => o.id === id);
+        const currentIndex = statuses.indexOf(order.status);
+        if (currentIndex >= statuses.length - 1) return;
+        await atualizarStatus(id, statuses[currentIndex + 1]);
+    }
+
+    carregarPedidos();
+    setInterval(carregarPedidos, 5000);
+    })();
     </script>
 </body>
 </html>
