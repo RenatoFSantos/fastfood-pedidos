@@ -62,6 +62,31 @@
             document.getElementById('list3')
         ];
 
+
+        // Reseta completamente qualquer estado de expansão/disable na coluna AGUARDANDO PREPARO (list1)
+        function clearAguardandoExpanded() {
+            const list1 = document.getElementById('list1');
+            if (!list1) return;
+
+            // Remove modo expandido do container
+            list1.classList.remove('expanded-mode');
+
+            // Remove classes e estilos inline que podem travar cliques
+            const lis = list1.querySelectorAll('li');
+            lis.forEach(li => {
+                li.classList.remove('expanded', 'disabled');
+                li.style.pointerEvents = '';
+                li.style.width = '';
+                li.style.height = '';
+                li.style.flex = '';
+                li.style.alignSelf = '';
+            });
+
+            // Remove blocos de itens/detalhes que possam ter sido injetados
+            list1.querySelectorAll('.order-items, .items, .pedido-itens, .itens, .details, .accordion, .accordion-content')
+                .forEach(el => el.remove());
+        }
+
         async function carregarPedidos() {
             try {
                 const response = await fetch('/api/pedidos');
@@ -134,7 +159,7 @@ lists.forEach(list => list.innerHTML = '');
                 // Se estiver em modo expandido na coluna 1, limpa antes de mover/atualizar
             clearAguardandoExpanded();
 
-            const response = await fetch('/api/update-status', {
+                const response = await fetch('/api/update-status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id, novoStatus })
