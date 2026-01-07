@@ -138,6 +138,10 @@
         const statuses = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
         let orders = [];
 
+        // Cache em memória dos itens por pedido (evita refetch a cada render)
+        const itemsCache = new Map(); // pedidoId -> { items: Array, fetchedAt: number }
+        const ITEMS_CACHE_TTL_MS = 15000;
+
         const lists = [
             document.getElementById('list1'),
             document.getElementById('list2'),
@@ -203,96 +207,118 @@
                 details.innerHTML = '<em>Carregando itens...</em>';
 
                 // Clique no pedido (exceto setas) abre/fecha accordion
-                header.addEventListener('click', async () => {
-                    await toggleAccordion(li, details, order.id);
-                });
+// Regra: em "EM PREPARO" os itens ficam sempre visíveis (sem efeito de accordion)
+if (order.status !== 'EM PREPARO') {
+    header.addEventListener('click', async () => {
+        await toggleAccordion(li, details, order.id);
+    });
+}
+li.appendChild(header);
+li.appendChild(details);
 
-                li.appendChild(header);
-                li.appendChild(details);
+// Em "EM PREPARO", mantém itens sempre visíveis
+if (order.status === 'EM PREPARO') {
+    details.classList.add('open');
+    // carrega itens automaticamente (usa cache)
+    ensureItemsVisible(details, order.id);
+}
 
-                lists[index].appendChild(li);
+lists[index].appendChild(li);
+
             });
         }
 
-        async function toggleAccordion(li, detailsEl, pedidoId) {
-            const isOpen = detailsEl.classList.contains('open');
+        async function fetchPedidoItens(pedidoId) {
+    const key = String(pedidoId);
+    const now = Date.now();
+    const cached = itemsCache.get(key);
+    if (cached && (now - cached.fetchedAt) < ITEMS_CACHE_TTL_MS) {
+        return cached.items;
+    }
 
-            // Fecha
-            if (isOpen) {
-                detailsEl.classList.remove('open');
-                return;
-            }
+    const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
+    if (!resp.ok) throw new Error('Falha ao buscar itens');
+    const items = await resp.json();
 
-            // Se ainda não carregou, busca no backend
-            if (!li.dataset.itemsLoaded) {
-                detailsEl.innerHTML = '<em>Carregando itens...</em>';
-                detailsEl.classList.add('open');
+    itemsCache.set(key, { items, fetchedAt: now });
+    return items;
+}
 
-                try {
-                    const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
-                    if (!resp.ok) throw new Error('Falha ao buscar itens');
-                    const data = await resp.json();
+function renderPedidoItens(detailsEl, itens) {
+    if (!Array.isArray(itens) || itens.length === 0) {
+        detailsEl.innerHTML = '<em>Nenhum item encontrado.</em>';
+        return;
+    }
 
-                    const itens = Array.isArray(data.itens) ? data.itens : [];
+    const ul = document.createElement('ul');
+    ul.className = 'items';
 
-                    if (!itens.length) {
-                        detailsEl.innerHTML = '<em>Pedido sem itens.</em>';
-                        li.dataset.itemsLoaded = '1';
-                        return;
-                    }
+    for (const item of itens) {
+        const produto = item.produto ?? '';
+        const qtdRaw = item.quantidade;
+        const precoRaw = item.preco;
 
-                    // Render: tenta usar campos comuns; se não existirem, mostra JSON.
-                    const ul = document.createElement('ul');
-                    ul.className = 'items';
+        const qtdNum = Number(qtdRaw);
+        const precoNum = Number(precoRaw);
 
-                    const fmtBRL = (v) => {
-                        const n = Number(v);
-                        if (!Number.isFinite(n)) return '';
-                        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
-                    };
+        const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
+        const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
 
-                    for (const item of itens) {
-                        // De acordo com a tabela fsf_pedido_item:
-                        // produto, preco, quantidade, status, data, pedido_id
-                        const produto = item.produto ?? '';
-                        const qtdRaw = item.quantidade;
-                        const precoRaw = item.preco;
-
-                        const qtdNum = Number(qtdRaw);
-                        const precoNum = Number(precoRaw);
-
-                        const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
-                        const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
-
-                        let subtotalTxt = '';
-                        if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
-                            subtotalTxt = fmtBRL(qtdNum * precoNum);
-                        }
-
-                        const text = [
-                            qtdTxt !== '' ? `${qtdTxt} x` : null,
-                            produto || null,
-                            precoTxt ? `— ${precoTxt}` : null,
-                            subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
-                        ].filter(Boolean).join(' ');
-
-                        const liItem = document.createElement('li');
-                        liItem.textContent = text || JSON.stringify(item);
-                        ul.appendChild(liItem);
-                    }
-
-                    detailsEl.innerHTML = '';
-                    detailsEl.appendChild(ul);
-                    li.dataset.itemsLoaded = '1';
-                } catch (err) {
-                    console.error(err);
-                    detailsEl.innerHTML = '<em>Erro ao carregar itens do pedido.</em>';
-                }
-            }
-
-            // Abre
-            detailsEl.classList.add('open');
+        let subtotalTxt = '';
+        if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
+            subtotalTxt = fmtBRL(qtdNum * precoNum);
         }
+
+        const text = [
+            qtdTxt !== '' ? `${qtdTxt} x` : null,
+            produto || null,
+            precoTxt ? `— ${precoTxt}` : null,
+            subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
+        ].filter(Boolean).join(' ');
+
+        const liItem = document.createElement('li');
+        liItem.textContent = text || JSON.stringify(item);
+        ul.appendChild(liItem);
+    }
+
+    detailsEl.innerHTML = '';
+    detailsEl.appendChild(ul);
+}
+
+async function ensureItemsVisible(detailsEl, pedidoId) {
+    // Evita refazer o mesmo carregamento em paralelo
+    if (detailsEl.dataset.loading === '1') return;
+
+    // Se já tem conteúdo renderizado, não precisa recarregar aqui
+    if (detailsEl.dataset.rendered === '1') return;
+
+    detailsEl.dataset.loading = '1';
+    detailsEl.innerHTML = '<em>Carregando itens...</em>';
+
+    try {
+        const itens = await fetchPedidoItens(pedidoId);
+        renderPedidoItens(detailsEl, itens);
+        detailsEl.dataset.rendered = '1';
+    } catch (err) {
+        console.error(err);
+        detailsEl.innerHTML = '<em>Erro ao carregar itens.</em>';
+    } finally {
+        detailsEl.dataset.loading = '0';
+    }
+}
+
+async function toggleAccordion(li, detailsEl, pedidoId) {
+    const isOpen = detailsEl.classList.contains('open');
+
+    // Fecha
+    if (isOpen) {
+        detailsEl.classList.remove('open');
+        return;
+    }
+
+    detailsEl.classList.add('open');
+    await ensureItemsVisible(detailsEl, pedidoId);
+}
 
         async function moverEsquerda(id) {
             const order = orders.find(o => o.id === id);
