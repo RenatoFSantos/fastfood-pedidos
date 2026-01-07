@@ -238,7 +238,9 @@ lists[index].appendChild(li);
 
     const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
     if (!resp.ok) throw new Error('Falha ao buscar itens');
-    const items = await resp.json();
+    const data = await resp.json();
+    // Backend pode retornar diretamente um array OU um objeto {itens:[...]}
+    const items = Array.isArray(data) ? data : (Array.isArray(data?.itens) ? data.itens : []);
 
     itemsCache.set(key, { items, fetchedAt: now });
     return items;

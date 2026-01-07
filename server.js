@@ -63,7 +63,8 @@ app.get('/api/pedidos/:id/itens', adminAuth, async (req, res) => {
       [pedidoId]
     );
 
-    res.json({ pedidoId, itens: result.rows });
+    // Retorna um array diretamente (mais simples para o frontend)
+    res.json(result.rows);
   } catch (err) {
     console.error('Erro ao buscar itens do pedido:', err);
     res.status(500).json({ error: 'Erro interno ao buscar itens do pedido' });
