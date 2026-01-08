@@ -124,339 +124,430 @@
 
     <script>
 
-        (() => {
-    const STATUS = {
-        AGUARDANDO: 'AGUARDANDO PREPARO',
-        PREPARO: 'EM PREPARO',
-        CONCLUIDO: 'CONCLUIDO',
-    };
+    (() => {
+        const STATUS = {
+            AGUARDANDO: 'AGUARDANDO PREPARO',
+            PREPARO: 'EM PREPARO',
+            CONCLUIDO: 'CONCLUIDO',
+        };
 
-    const statuses = [STATUS.AGUARDANDO, STATUS.PREPARO, STATUS.CONCLUIDO];
+        const statuses = [STATUS.AGUARDANDO, STATUS.PREPARO, STATUS.CONCLUIDO];
 
-    const lists = {
-        aguardando: document.getElementById('list1'),
-        preparo: document.getElementById('list2'),
-        concluido: document.getElementById('list3'),
-    };
+        const lists = {
+            aguardando: document.getElementById('list1'),
+            preparo: document.getElementById('list2'),
+            concluido: document.getElementById('list3'),
+        };
 
-    let orders = [];
-    let expandedAguardandoId = null;
+        let orders = [];
+        let expandedAguardandoId = null;
 
-    // Cache simples para itens (evita flood no backend)
-    const itemsCache = new Map(); // id -> { ts, items }
-    const ITEMS_TTL_MS = 15000;
+        // Cache simples para itens (evita flood no backend)
+        const itemsCache = new Map(); // id -> { ts, items }
+        const ITEMS_TTL_MS = 15000;
 
-    function normalizeItemsPayload(data) {
-        if (Array.isArray(data)) return data;
-        if (data && Array.isArray(data.itens)) return data.itens;
-        return [];
-    }
-
-    async function fetchItems(pedidoId) {
-        const now = Date.now();
-        const cached = itemsCache.get(pedidoId);
-        if (cached && (now - cached.ts) < ITEMS_TTL_MS) return cached.items;
-
-        const resp = await fetch(`/api/pedidos/${pedidoId}/itens`, { cache: 'no-store' });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status} ao buscar itens`);
-        const data = await resp.json();
-        const items = normalizeItemsPayload(data);
-        itemsCache.set(pedidoId, { ts: now, items });
-        return items;
-    }
-
-    function clearChildren(el) {
-        while (el.firstChild) el.removeChild(el.firstChild);
-    }
-
-    function clearAguardandoExpanded() {
-        const list = lists.aguardando;
-        if (!list) return;
-        list.classList.remove('expanded-mode');
-        list.querySelectorAll('li').forEach(li => {
-        li.classList.remove('expanded', 'disabled');
-        li.style.pointerEvents = '';
-        // remove bloco de itens se existir
-        li.querySelectorAll('.order-items').forEach(x => x.remove());
-        });
-    }
-
-    function setAguardandoExpanded(li, pedidoId) {
-        const list = lists.aguardando;
-        expandedAguardandoId = pedidoId;
-
-        list.classList.add('expanded-mode');
-        li.classList.add('expanded');
-
-        // desabilita demais
-        list.querySelectorAll('li').forEach(other => {
-        if (other !== li) other.classList.add('disabled');
-        });
-    }
-
-    function clearAguardandoExpandedKeepId() {
-        // mantém expandedAguardandoId (usado quando mover seta chama render e queremos limpar visual)
-        const keep = expandedAguardandoId;
-        clearAguardandoExpanded();
-        expandedAguardandoId = keep;
-    }
-
-    function renderItemsInto(li, items) {
-        // remove anterior
-        li.querySelectorAll('.order-items').forEach(x => x.remove());
-
-        const box = document.createElement('div');
-        box.className = 'order-items';
-
-        if (!items || items.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'order-item-text';
-        empty.textContent = 'Nenhum item encontrado.';
-        box.appendChild(empty);
-        } else {
-        items.forEach(it => {
-            const row = document.createElement('div');
-            row.className = 'order-item-text';
-            const q = (it.quantidade ?? 0);
-            const qtd = (typeof q === 'string' ? Number(q) : q);
-            row.textContent = `${Number.isFinite(qtd) ? qtd : q}x ${it.produto ?? ''}`.trim();
-            box.appendChild(row);
-        });
+        function normalizeItemsPayload(data) {
+            if (Array.isArray(data)) return data;
+            if (data && Array.isArray(data.itens)) return data.itens;
+            return [];
         }
 
-        li.appendChild(box);
-    }
+        async function fetchItems(pedidoId) {
+            const now = Date.now();
+            const cached = itemsCache.get(pedidoId);
+            if (cached && (now - cached.ts) < ITEMS_TTL_MS) return cached.items;
 
-    function makeOrderLI(order, colIndex) {
-        const li = document.createElement('li');
-        li.dataset.id = order.id;
+            const resp = await fetch(`/api/pedidos/${pedidoId}/itens`, { cache: 'no-store' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status} ao buscar itens`);
+            const data = await resp.json();
+            const items = normalizeItemsPayload(data);
+            itemsCache.set(pedidoId, { ts: now, items });
+            return items;
+        }
 
-        // header
-        const header = document.createElement('div');
-        header.className = 'order-header';
+        function clearChildren(el) {
+            while (el.firstChild) el.removeChild(el.firstChild);
+        }
 
-        const leftArrow = document.createElement('span');
-        leftArrow.className = 'arrow';
-        leftArrow.textContent = '◄';
-        if (colIndex === 0) leftArrow.classList.add('disabled');
+        function clearAguardandoExpanded() {
+            const list = lists.aguardando;
+            if (!list) return;
+            list.classList.remove('expanded-mode');
+            list.querySelectorAll('li').forEach(li => {
+            li.classList.remove('expanded', 'disabled');
+            li.style.pointerEvents = '';
+            // remove bloco de itens se existir
+            li.querySelectorAll('.order-items').forEach(x => x.remove());
+            });
+        }
 
-        const orderNum = document.createElement('span');
-        orderNum.className = 'order-num';
-        orderNum.textContent = `${order.id}`;
+        function setAguardandoExpanded(li, pedidoId) {
+            const list = lists.aguardando;
+            expandedAguardandoId = pedidoId;
 
-        const rightArrow = document.createElement('span');
-        rightArrow.className = 'arrow';
-        rightArrow.textContent = '►';
-        if (colIndex === statuses.length - 1) rightArrow.classList.add('disabled');
+            list.classList.add('expanded-mode');
+            li.classList.add('expanded');
 
-        header.appendChild(leftArrow);
-        header.appendChild(orderNum);
-        header.appendChild(rightArrow);
-        li.appendChild(header);
+            // desabilita demais
+            list.querySelectorAll('li').forEach(other => {
+            if (other !== li) other.classList.add('disabled');
+            });
+        }
 
-        // setas
-        leftArrow.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        // ao mover, limpa expansão para não travar
-        expandedAguardandoId = null;
-        clearAguardandoExpanded();
-        await moverEsquerda(order.id);
-        });
+        function clearAguardandoExpandedKeepId() {
+            // mantém expandedAguardandoId (usado quando mover seta chama render e queremos limpar visual)
+            const keep = expandedAguardandoId;
+            clearAguardandoExpanded();
+            expandedAguardandoId = keep;
+        }
 
-        rightArrow.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        expandedAguardandoId = null;
-        clearAguardandoExpanded();
-        await moverDireita(order.id);
-        });
+        function renderItemsInto(li, items) {
+            // remove anterior
+            li.querySelectorAll('.order-items').forEach(x => x.remove());
 
-        // comportamento por coluna
-        if (order.status === STATUS.AGUARDANDO) {
-            // Clique abre/fecha (somente nesta coluna)
-            li.addEventListener('click', async () => {
-                const id = Number(order.id);
-                const list = lists.aguardando;
+            const box = document.createElement('div');
+            box.className = 'order-items';
 
-                // se clicou no mesmo, fecha
-                if (expandedAguardandoId === id && li.classList.contains('expanded')) {
+            if (!items || items.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'order-item-text';
+                empty.textContent = 'Nenhum item encontrado.';
+                box.appendChild(empty);
+            } else {
+                items.forEach(it => {
+                    const row = document.createElement('div');
+                    row.className = 'order-item-text';
+                    const q = (it.quantidade ?? 0);
+                    const qtd = (typeof q === 'string' ? Number(q) : q);
+                    row.textContent = `${Number.isFinite(qtd) ? qtd : q}x ${it.produto ?? ''}`.trim();
+                    box.appendChild(row);
+                });
+            }
+        }
+
+        function render() {
+            lists.forEach(list => list.innerHTML = '');
+
+            // header
+            const header = document.createElement('div');
+            header.className = 'order-header';
+
+            const leftArrow = document.createElement('span');
+            leftArrow.className = 'arrow';
+            leftArrow.textContent = '◄';
+            if (colIndex === 0) leftArrow.classList.add('disabled');
+
+            const orderNum = document.createElement('span');
+            orderNum.className = 'order-num';
+            orderNum.textContent = `${order.id}`;
+
+            const rightArrow = document.createElement('span');
+            rightArrow.className = 'arrow';
+            rightArrow.textContent = '►';
+            if (colIndex === statuses.length - 1) rightArrow.classList.add('disabled');
+
+            header.appendChild(leftArrow);
+            header.appendChild(orderNum);
+            header.appendChild(rightArrow);
+            li.appendChild(header);
+
+            // setas
+            leftArrow.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                // ao mover, limpa expansão para não travar
                 expandedAguardandoId = null;
                 clearAguardandoExpanded();
-                return;
-                }
+                await moverEsquerda(order.id);
+            });
 
-                const ul = document.createElement('ul');
-                ul.className = 'items';
+            rightArrow.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                expandedAguardandoId = null;
+                clearAguardandoExpanded();
+                await moverDireita(order.id);
+            });
 
-                for (const item of itens) {
-                    const produto = item.produto ?? '';
-                    const qtdRaw = item.quantidade;
-                    const precoRaw = item.preco;
+            // comportamento por coluna
+            if (order.status === STATUS.AGUARDANDO) {
+                // Clique abre/fecha (somente nesta coluna)
+                li.addEventListener('click', async () => {
+                    const id = Number(order.id);
+                    const list = lists.aguardando;
 
-                    const qtdNum = Number(qtdRaw);
-                    const precoNum = Number(precoRaw);
+                    // Clique no pedido (exceto setas) abre/fecha accordion
+                    // Regra: em "EM PREPARO" os itens ficam sempre visíveis (sem efeito de accordion)
+                    if (order.status !== 'EM PREPARO') {
+                        header.addEventListener('click', async () => {
+                            await toggleAccordion(li, details, order.id);
+                        });
+                    }
+                    li.appendChild(header);
+                    li.appendChild(details);
 
-                    const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
-                    const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
-
-                    let subtotalTxt = '';
-                    if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
-                        subtotalTxt = fmtBRL(qtdNum * precoNum);
+                    // Em "EM PREPARO", mantém itens sempre visíveis
+                    if (order.status === 'EM PREPARO') {
+                        details.classList.add('open');
+                        // carrega itens automaticamente (usa cache)
+                        ensureItemsVisible(details, order.id);
                     }
 
-                    const text = [
-                        qtdTxt !== '' ? `${qtdTxt} x` : null,
-                        produto || null,
-                        // precoTxt ? `— ${precoTxt}` : null,
-                        // subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
-                    ].filter(Boolean).join(' ');
+                    lists[index].appendChild(li);
 
-                    const liItem = document.createElement('li');
-                    liItem.textContent = text || JSON.stringify(item);
-                    ul.appendChild(liItem);
+                });
+            }
+        }
+
+        async function fetchPedidoItens(pedidoId) {
+            const key = String(pedidoId);
+            const now = Date.now();
+            const cached = itemsCache.get(key);
+            if (cached && (now - cached.fetchedAt) < ITEMS_CACHE_TTL_MS) {
+                return cached.items;
+            }
+
+            const resp = await fetch(`/api/pedidos/${encodeURIComponent(pedidoId)}/itens`);
+            if (!resp.ok) throw new Error('Falha ao buscar itens');
+            const data = await resp.json();
+            // Backend pode retornar diretamente um array OU um objeto {itens:[...]}
+            const items = Array.isArray(data) ? data : (Array.isArray(data?.itens) ? data.itens : []);
+
+            itemsCache.set(key, { items, fetchedAt: now });
+            return items;
+        }
+
+        function renderPedidoItens(detailsEl, itens) {
+            if (!Array.isArray(itens) || itens.length === 0) {
+                detailsEl.innerHTML = '<em>Nenhum item encontrado.</em>';
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            ul.className = 'items';
+
+            for (const item of itens) {
+                const produto = item.produto ?? '';
+                const qtdRaw = item.quantidade;
+                const precoRaw = item.preco;
+
+                const qtdNum = Number(qtdRaw);
+                const precoNum = Number(precoRaw);
+
+                const qtdTxt = Number.isFinite(qtdNum) ? qtdNum.toString() : (qtdRaw ?? '');
+                const precoTxt = fmtBRL(precoRaw) || (precoRaw ?? '');
+
+                let subtotalTxt = '';
+                if (Number.isFinite(qtdNum) && Number.isFinite(precoNum)) {
+                    subtotalTxt = fmtBRL(qtdNum * precoNum);
                 }
 
-                detailsEl.innerHTML = '';
-                detailsEl.appendChild(ul);
-            })
+                const text = [
+                    qtdTxt !== '' ? `${qtdTxt} x` : null,
+                    produto || null,
+                    precoTxt ? `— ${precoTxt}` : null,
+                    subtotalTxt ? `(Subtotal: ${subtotalTxt})` : null,
+                ].filter(Boolean).join(' ');
+
+                const liItem = document.createElement('li');
+                liItem.textContent = text || JSON.stringify(item);
+                ul.appendChild(liItem);
+            }
+
+            detailsEl.innerHTML = '';
+            detailsEl.appendChild(ul);
         }
 
         async function ensureItemsVisible(detailsEl, pedidoId) {
             // Evita refazer o mesmo carregamento em paralelo
             if (detailsEl.dataset.loading === '1') return;
 
-            // carrega itens e injeta
+            // Se já tem conteúdo renderizado, não precisa recarregar aqui
+            if (detailsEl.dataset.rendered === '1') return;
+
+            detailsEl.dataset.loading = '1';
+            detailsEl.innerHTML = '<em>Carregando itens...</em>';
+
             try {
-                const items = await fetchItems(id);
-                renderItemsInto(li, items);
+                const itens = await fetchPedidoItens(pedidoId);
+                renderPedidoItens(detailsEl, itens);
+                detailsEl.dataset.rendered = '1';
             } catch (err) {
                 console.error(err);
-                renderItemsInto(li, []);
-                const box = li.querySelector('.order-items');
-                if (box) {
-                    box.firstChild.textContent = 'Erro ao carregar itens.';
-                }
+                detailsEl.innerHTML = '<em>Erro ao carregar itens.</em>';
+            } finally {
+                detailsEl.dataset.loading = '0';
             }
+        }
+
+        async function toggleAccordion(li, detailsEl, pedidoId) {
+            const isOpen = detailsEl.classList.contains('open');
+
+            // Fecha
+            if (isOpen) {
+                detailsEl.classList.remove('open');
+                return;
+            }
+
+            detailsEl.classList.add('open');
+            await ensureItemsVisible(detailsEl, pedidoId);
+        }
+
+        async function moverEsquerda(id) {
+            const order = orders.find(o => o.id === id);
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex <= 0) return;
+
+            const novoStatus = statuses[currentIndex - 1];
+            await atualizarStatus(id, novoStatus);
+        }
+
+        async function moverDireita(id) {
+            const order = orders.find(o => o.id === id);
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex >= statuses.length - 1) return;
+
+            const novoStatus = statuses[currentIndex + 1];
+            await atualizarStatus(id, novoStatus);
+        }
+
+        async function atualizarStatus(id, novoStatus) {
+            try {
+                const response = await fetch('/api/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, novoStatus })
+                });
+
+                if (response.ok) {
+                    const updated = await response.json();
+                    const order = orders.find(o => o.id === id);
+                    order.status = updated.status;
+                    render();
+                } else {
+                    alert('Erro ao atualizar o status');
+                }
+            } catch (error) {
+                alert('Erro na atualização do Status na API');
+            }
+
         };
-        
 
         return li;
-    }
 
-    async function ensureItemsVisiblePreparo(li, pedidoId) {
-        // Coluna EM PREPARO: sempre visível, sem accordion
-        try {
-        const items = await fetchItems(pedidoId);
-        renderItemsInto(li, items);
-        } catch (err) {
-        console.error(err);
-        renderItemsInto(li, []);
-        const box = li.querySelector('.order-items');
-        if (box) box.firstChild.textContent = 'Erro ao carregar itens.';
-        }
-    }
-
-    function render() {
-        // guarda qual pedido estava expandido, e reabre depois do render
-        const keepExpanded = expandedAguardandoId;
-
-        // Limpa listas
-        clearChildren(lists.aguardando);
-        clearChildren(lists.preparo);
-        clearChildren(lists.concluido);
-
-        // Ordena por id crescente (ajuste se preferir por data)
-        const sorted = [...orders].sort((a,b) => Number(a.id) - Number(b.id));
-
-        for (const order of sorted) {
-        const idx = statuses.indexOf(order.status);
-        if (idx === -1) continue;
-
-        const li = makeOrderLI(order, idx);
-
-        if (order.status === STATUS.AGUARDANDO) {
-            lists.aguardando.appendChild(li);
-        } else if (order.status === STATUS.PREPARO) {
-            lists.preparo.appendChild(li);
-            // mostra itens automaticamente
-            ensureItemsVisiblePreparo(li, Number(order.id));
-        } else {
-            lists.concluido.appendChild(li);
-            // (mantém sem accordion aqui por enquanto — pode adicionar se quiser)
-        }
+        async function ensureItemsVisiblePreparo(li, pedidoId) {
+            // Coluna EM PREPARO: sempre visível, sem accordion
+            try {
+            const items = await fetchItems(pedidoId);
+            renderItemsInto(li, items);
+            } catch (err) {
+            console.error(err);
+            renderItemsInto(li, []);
+            const box = li.querySelector('.order-items');
+            if (box) box.firstChild.textContent = 'Erro ao carregar itens.';
+            }
         }
 
-        // Reabre o expandido (se ainda existir e estiver em aguardando)
-        expandedAguardandoId = null;
-        clearAguardandoExpanded();
-        if (keepExpanded != null) {
-        const li = lists.aguardando.querySelector(`li[data-id="${keepExpanded}"]`);
-        if (li) {
-            expandedAguardandoId = Number(keepExpanded);
-            setAguardandoExpanded(li, Number(keepExpanded));
-            fetchItems(Number(keepExpanded))
-            .then(items => renderItemsInto(li, items))
-            .catch(err => {
-                console.error(err);
-                renderItemsInto(li, []);
-                const box = li.querySelector('.order-items');
-                if (box) box.firstChild.textContent = 'Erro ao carregar itens.';
-            });
-        }
-        }
-    }
+        function render() {
+            // guarda qual pedido estava expandido, e reabre depois do render
+            const keepExpanded = expandedAguardandoId;
 
-    async function carregarPedidos() {
-        try {
-        const response = await fetch('/api/pedidos', { cache: 'no-store' });
-        orders = await response.json();
-        render();
-        } catch (err) {
-        console.error('Erro ao carregar pedidos:', err);
-        }
-    }
+            // Limpa listas
+            clearChildren(lists.aguardando);
+            clearChildren(lists.preparo);
+            clearChildren(lists.concluido);
 
-    async function atualizarStatus(id, novoStatus) {
-        try {
-        const response = await fetch(`/api/pedidos/${id}/status`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: novoStatus })
-        });
+            // Ordena por id crescente (ajuste se preferir por data)
+            const sorted = [...orders].sort((a,b) => Number(a.id) - Number(b.id));
 
-        if (response.ok) {
-            const updated = await response.json();
-            const order = orders.find(o => o.id === id);
-            if (order) order.status = updated.status;
-            // limpamos qualquer expansão ao atualizar status
+            for (const order of sorted) {
+                const idx = statuses.indexOf(order.status);
+                if (idx === -1) continue;
+
+                const li = makeOrderLI(order, idx);
+
+                if (order.status === STATUS.AGUARDANDO) {
+                    lists.aguardando.appendChild(li);
+                } else if (order.status === STATUS.PREPARO) {
+                    lists.preparo.appendChild(li);
+                    // mostra itens automaticamente
+                    ensureItemsVisiblePreparo(li, Number(order.id));
+                } else {
+                    lists.concluido.appendChild(li);
+                    // (mantém sem accordion aqui por enquanto — pode adicionar se quiser)
+                }
+            }
+
+            // Reabre o expandido (se ainda existir e estiver em aguardando)
             expandedAguardandoId = null;
             clearAguardandoExpanded();
+            if (keepExpanded != null) {
+                const li = lists.aguardando.querySelector(`li[data-id="${keepExpanded}"]`);
+                if (li) {
+                    expandedAguardandoId = Number(keepExpanded);
+                    setAguardandoExpanded(li, Number(keepExpanded));
+                    fetchItems(Number(keepExpanded))
+                    .then(items => renderItemsInto(li, items))
+                    .catch(err => {
+                        console.error(err);
+                        renderItemsInto(li, []);
+                        const box = li.querySelector('.order-items');
+                        if (box) box.firstChild.textContent = 'Erro ao carregar itens.';
+                    });
+                }
+            }
+        }
+
+        async function carregarPedidos() {
+            try {
+            const response = await fetch('/api/pedidos', { cache: 'no-store' });
+            orders = await response.json();
             render();
-        } else {
-            alert('Erro ao atualizar o status');
+            } catch (err) {
+            console.error('Erro ao carregar pedidos:', err);
+            }
         }
-        } catch (err) {
-        console.error(err);
-        alert('Erro de conexão');
+
+        async function atualizarStatus(id, novoStatus) {
+            try {
+            const response = await fetch(`/api/pedidos/${id}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: novoStatus })
+            });
+
+            if (response.ok) {
+                const updated = await response.json();
+                const order = orders.find(o => o.id === id);
+                if (order) order.status = updated.status;
+                // limpamos qualquer expansão ao atualizar status
+                expandedAguardandoId = null;
+                clearAguardandoExpanded();
+                render();
+            } else {
+                alert('Erro ao atualizar o status');
+            }
+            } catch (err) {
+            console.error(err);
+            alert('Erro de conexão');
+            }
         }
-    }
 
-    async function moverEsquerda(id) {
-        const order = orders.find(o => o.id === id);
-        const currentIndex = statuses.indexOf(order.status);
-        if (currentIndex <= 0) return;
-        await atualizarStatus(id, statuses[currentIndex - 1]);
-    }
+        async function moverEsquerda(id) {
+            const order = orders.find(o => o.id === id);
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex <= 0) return;
+            await atualizarStatus(id, statuses[currentIndex - 1]);
+        }
 
-    async function moverDireita(id) {
-        const order = orders.find(o => o.id === id);
-        const currentIndex = statuses.indexOf(order.status);
-        if (currentIndex >= statuses.length - 1) return;
-        await atualizarStatus(id, statuses[currentIndex + 1]);
-    }
+        async function moverDireita(id) {
+            const order = orders.find(o => o.id === id);
+            const currentIndex = statuses.indexOf(order.status);
+            if (currentIndex >= statuses.length - 1) return;
+            await atualizarStatus(id, statuses[currentIndex + 1]);
+        }
 
-    carregarPedidos();
-    setInterval(carregarPedidos, 5000);
-    })();
+        carregarPedidos();
+        setInterval(carregarPedidos, 5000);
+    });
     </script>
 </body>
 </html>
