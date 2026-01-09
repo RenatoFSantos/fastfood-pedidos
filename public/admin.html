@@ -226,7 +226,7 @@
             itens.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'item';
-                li.textContent = `${item.produto} - Quantidade: ${item.quantidade} - Preço: R$${item.preco.toFixed(2)}`;
+                li.textContent = `-> ${item.quantidade}x ${item.produto}}`;
                 list.appendChild(li);
             });
             container.style.display = 'block';
