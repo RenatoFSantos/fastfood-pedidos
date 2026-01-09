@@ -31,14 +31,13 @@
             gap: 20px;
         }
 
-        .column {
-            flex: 1;
-            border: 1px solid #ccc;
-            padding: 20px;
-            min-height: 100vh;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
+        .column { width: 30%; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .column h2 { text-align: center; margin-bottom: 15px; color: #333; }
+        .column ul { list-style: none; padding: 0; min-height: 200px; }
+        .column li { 
+            background: #eee; margin-bottom: 10px; padding: 12px; border-radius: 5px; 
+            text-align: center; font-weight: bold; font-size: 3.1em;
+        }        
 
         .column-title {
             text-align: center;
@@ -110,19 +109,19 @@
     </style>
 </head>
 <body>
+    <div class="title">Lista de Pedidos - Alhadas Burger</div>
     <div class="container">
-        <div class="title">Lista de Pedidos - Alhadas Burger</div>
         <div class="columns">
             <div class="column" id="aguardando">
-                <div class="column-title">AGUARDANDO PREPARO</div>
+                <h2>AGUARDANDO PREPARO</h2>
                 <ul class="pedido-list"></ul>
             </div>
             <div class="column" id="em-preparo">
-                <div class="column-title">EM PREPARO</div>
+                <h2>EM PREPARO</h2>
                 <ul class="pedido-list"></ul>
             </div>
             <div class="column" id="concluido">
-                <div class="column-title">CONCLUÍDO</div>
+                <h2>CONCLUÍDO</h2>
                 <ul class="pedido-list"></ul>
             </div>
         </div>
@@ -136,9 +135,9 @@
         const STATUS_MAP = {
             'AGUARDANDO PREPARO': 0,
             'EM PREPARO': 1,
-            'CONCLUÍDO': 2
+            'CONCLUIDO': 2
         };
-        const STATUS_ARRAY = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUÍDO'];
+        const STATUS_ARRAY = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
         const API_BASE = '/api'; // Ajuste se o servidor estiver em outro host/porta
         const AUTH_USER = 'admin';
         const AUTH_PASS = 'fastfood2026';
