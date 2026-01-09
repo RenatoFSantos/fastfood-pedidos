@@ -39,7 +39,7 @@
 
         .columns {
             display: flex;
-            min-width: 100vw;
+            min-width: 90vw;
             justify-content: space-between;
             gap: 20px;
         }
@@ -117,7 +117,8 @@
 
         .item {
             margin-bottom: 10px;
-            font-size: 14px;
+            font-size: 18px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -226,7 +227,7 @@
             itens.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'item';
-                li.textContent = `-> ${item.quantidade}x ${item.produto}}`;
+                li.textContent = `📦 - ${item.quantidade}.toFixed()x ${item.produto}`;
                 list.appendChild(li);
             });
             container.style.display = 'block';
