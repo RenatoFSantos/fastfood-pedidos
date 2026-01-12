@@ -14,9 +14,10 @@
             background: url('images/fastfood_pattern.jpg') repeat; /* Assumindo nome da imagem como fast_food_pattern.png; ajuste se necessário */
             background-repeat: repeat;
             background-position: top left;
+            overflow: hidden;
         }
-        .container { display: flex; justify-content: space-around; gap: 20px; }
-        .column { width: 30%; background: white; border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .container { display: flex; justify-content: space-around; gap: 20px; min-height: 80dvh; margin-bottom: 20px; }
+        .column { width: 30%; background: rgb(255, 255, 255); border: 1px solid #ddd; border-radius: 8px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .column h2 { text-align: center; margin-bottom: 15px; color: #333; }
         .column ul { list-style: none; padding: 0; min-height: 200px; }
         .column li { 
