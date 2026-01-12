@@ -1,4 +1,4 @@
-body, ul, li, p {
+body, p {
     margin: 0;
     padding: 0;
     list-style: none;
@@ -8,7 +8,7 @@ body, ul, li, p {
     background-color: #fff;
     color: #333;
     position: relative;
-    overflow: hidden;
+    /* overflow: hidden; */
 }
 
 a {
@@ -104,8 +104,27 @@ img {
 
 .itens-list {
     list-style: none;
+    background-color: white;
     padding: 0;
     margin: 0;
+}
+
+.item {
+    margin-bottom: 10px;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+
+.arrow {
+    font-size: 32px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.arrow.disabled {
+    color: #ccc;
+    cursor: default;
 }
 
 /* FASTFOOD STYLE */
@@ -184,16 +203,6 @@ img {
     margin: 0 20px;
 }
 
-.arrow {
-    font-size: 32px;
-    cursor: pointer;
-    user-select: none;
-}
-
-.arrow.disabled {
-    color: #ccc;
-    cursor: default;
-}
 
 .itens-container {
     display: flex;
@@ -220,8 +229,3 @@ img {
 
 
 
-.item {
-    margin-bottom: 10px;
-    font-size: 24px;
-    font-weight: bold;
-}
