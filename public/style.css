@@ -54,7 +54,33 @@ img {
     border: solid 2px #c2c2c2;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);   
-    text-align: center; margin-bottom: 15px; color: #333;      
+}
+
+.grid_fsf > div > h2 {
+    text-align: center; 
+    margin-bottom: 15px; 
+    color: #333;
+}
+
+.grid_fsf > div > h3 {
+    text-align: left; 
+    padding-left: 10px; 
+    color: #333;
+}
+
+.grid_fsf > div > ul {
+    list-style: none; 
+    padding: 0; 
+}
+
+.grid_fsf > div > li {
+    background-color: #eee; 
+    margin-bottom: 10px; 
+    padding: 12px; 
+    border-radius: 5px; 
+    text-align: center; 
+    font-weight: bold; 
+    font-size: 3.1em;
 }
 
 .grid_fsf > div.column1 {
@@ -69,6 +95,18 @@ img {
     display: block;
 }
 
+.pedido-list {
+    list-style: none;
+    background-color: white;
+    padding: 0;
+    margin: 0;
+}
+
+.itens-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
 
 /* FASTFOOD STYLE */
 
@@ -122,12 +160,7 @@ img {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     min-height: 80vh;
 }
-.column h2 { text-align: center; margin-bottom: 15px; color: #333; }
-.column ul { list-style: none; padding: 0; min-height: 200px; }
-.column li { 
-    background: #eee; margin-bottom: 10px; padding: 12px; border-radius: 5px; 
-    text-align: center; font-weight: bold; font-size: 3.1em;
-}        
+      
 
 .column-title {
     text-align: center;
@@ -136,11 +169,6 @@ img {
     margin-bottom: 20px;
 }
 
-.pedido-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
 
 .pedido-item {
     display: flex;
@@ -190,11 +218,7 @@ img {
     font-size: 24px;
 }
 
-.itens-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
+
 
 .item {
     margin-bottom: 10px;

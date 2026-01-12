@@ -7,7 +7,7 @@
 </head>
 <body>
     <div class="title">Lista de Pedidos - Alhadas Burger</div>
-    <div class="grid_fsf">
+    <div class="grid_fsf" id="grid_fsf">
         <div class="column1" id="aguardando">
             <h2>AGUARDANDO PREPARO</h2>
             <ul class="pedido-list"></ul>
@@ -126,7 +126,7 @@
         }
 
         function renderItens(pedidoId, itens) {
-            const container = document.getElementById('itens-container');
+            const container = document.getElementById('grid_fsf');
             const idSpan = document.getElementById('pedido-id');
             const list = document.getElementById('itens-list');
             idSpan.textContent = pedidoId;
