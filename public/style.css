@@ -44,7 +44,7 @@ img {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     max-width: 97%;
-    height: 75vh;
+    height: 95vh;
     margin: 0 auto;
     gap: 20px;
 }
