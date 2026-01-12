@@ -93,7 +93,7 @@
                 li.className = 'pedido-item';
                 li.innerHTML = `
                     <span class="arrow ${STATUS_MAP[pedido.status] === 0 ? 'disabled' : ''}" data-direction="left">&lt;</span>
-                    <span data-id="${pedido.id}">${pedido.id}</span>
+                    <span class="pedido-id" data-id="${pedido.id}">${pedido.id}</span>
                     <span class="arrow ${STATUS_MAP[pedido.status] === 2 ? 'disabled' : ''}" data-direction="right">&gt;</span>
                 `;
                 const targetColumn = pedido.status === 'AGUARDANDO PREPARO' ? 'aguardando' :

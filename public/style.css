@@ -95,6 +95,12 @@ img {
     display: block;
 }
 
+.pedido-id {
+    text-align: center; 
+    margin-bottom: 15px; 
+    color: #333;
+}
+
 .pedido-list {
     list-style: none;
     background-color: white;
