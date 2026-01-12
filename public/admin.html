@@ -27,7 +27,7 @@
     </div>
 
 
-    <div class="container-master">
+    <!-- <div class="container-master">
         <div class="container">
             <div class="columns">
                 <div class="column" id="aguardando">
@@ -50,7 +50,7 @@
                 <ul class="itens-list" id="itens-list"></ul>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <script>
         const STATUS_MAP = {
@@ -137,7 +137,7 @@
                 li.textContent = `📦 - ${item.quantidade}x ${item.produto}`;
                 list.appendChild(li);
             });
-            container.style.display = 'block';
+            // container.style.display = 'grid';
         }
 
         async function movePedido(id, currentStatus, direction) {
