@@ -78,7 +78,7 @@ img {
     margin-bottom: 10px; 
     padding: 12px; 
     border-radius: 5px; 
-    text-align: center; 
+    text-align: left; 
     font-weight: bold; 
     font-size: 1.2em;
 }
@@ -96,7 +96,8 @@ img {
 }
 
 .pedido-id {
-    text-align: center; 
+    text-align: center;
+    font-size: 28px; 
     margin-bottom: 15px; 
     color: #333;
 }
