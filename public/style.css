@@ -43,6 +43,9 @@ img {
 .grid_fsf {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    min-width: 90vh;
+    min-height: 90vh;
+
     /* min-height: 90vh;
     max-height: 90vh;
     height: 90vh; */
