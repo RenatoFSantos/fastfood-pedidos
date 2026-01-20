@@ -43,9 +43,9 @@ img {
 .grid_fsf {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    min-height: 90vh;
+    /* min-height: 90vh;
     max-height: 90vh;
-    height: 90vh;
+    height: 90vh; */
     margin: 0 auto;
     gap: 20px;
 }
@@ -139,7 +139,7 @@ img {
 .container {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: space-around;
     align-items: stretch;
 }
 
