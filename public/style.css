@@ -200,7 +200,7 @@ img {
     align-items: center;
     justify-content: center;
     margin-bottom: 15px;
-    font-size: 32px;
+    font-size: 16px;
     font-weight: bold;
     cursor: pointer;
 }
@@ -230,7 +230,7 @@ img {
 
 .itens-container h3 {
     margin-top: 0;
-    font-size: 24px;
+    font-size: 16px;
 }
 
 
