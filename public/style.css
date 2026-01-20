@@ -136,24 +136,11 @@ img {
 
 /* FASTFOOD STYLE */
 
-.container-master {
+.container {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 90vh;
-}
-
-.container {
-    display: flex; 
-    justify-content: space-around; 
-}
-
-.container-detail {
-    display: flex;
-    justify-content: flex-end;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-    margin-right: 3vh;
+    align-items: stretch;
 }
 
 .title {
