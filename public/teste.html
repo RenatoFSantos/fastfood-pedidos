@@ -1,32 +1,93 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="./style.css"/>
-    <title>Document</title>
-</head>
-<body>
-    <div class="container" id="container">
-        <div class="title" lang="pt-BR">Lista de Pedidos - Alhadas Burger</div>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="./style.css"/>
+        <title>Teste</title>
+    </head>
+    <body>
         <div class="grid_fsf" id="grid_fsf">
+            <div class="column0">
+                <span class="title">Lista de Pedidos - Alhadas Burger</span>
+            </div>
             <div class="column1" id="aguardando">
                 <h2>AGUARDANDO PREPARO</h2>
-                <ul class="pedido-list"></ul>
+                <ul class="pedido-list">
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">01</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">02</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">03</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">04</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">05</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">06</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">07</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">08</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">09</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">10</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">11</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                    <li class="pedido-item">
+                        <span class="arrow" data-direction="left">&lt;</span>
+                        <span class="pedido-id" data-id="01">12</span>
+                        <span class="arrow" data-direction="right">&gt;</span>                        
+                    </li>
+                </ul>
             </div>
             <div class="column2" id="em-preparo">
                 <h2>EM PREPARO</h2>
                 <ul class="pedido-list"></ul>
             </div>
-            <div id="concluido">
+            <div class="column3" id="concluido">
                 <h2>CONCLUÍDO</h2>
                 <ul class="pedido-list"></ul>
             </div>
-            <div>
+            <div class="column4">
                 <h2>Pedido: <span id="pedido-id"></span></h2>
                 <ul class="itens-list" id="itens-list"></ul>
             </div>
         </div>
-    </div>    
-</body>
+    </body>
 </html>
