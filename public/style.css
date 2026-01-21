@@ -141,6 +141,7 @@ img {
     flex-direction: column;
     justify-content: space-around;
     align-items: stretch;
+    margin: 10px;
 }
 
 .title {
