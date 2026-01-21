@@ -43,13 +43,10 @@ img {
 .grid_fsf {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    min-width: 90vh;
-    min-height: 90vh;
-
     /* min-height: 90vh;
     max-height: 90vh;
     height: 90vh; */
-    margin: 0 auto;
+    margin: 0 20;
     gap: 20px;
 }
 
@@ -144,6 +141,8 @@ img {
     flex-direction: column;
     justify-content: space-around;
     align-items: stretch;
+    width: 95vh;
+    
 }
 
 .title {
