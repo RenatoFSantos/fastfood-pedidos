@@ -46,6 +46,7 @@ img {
     width: auto;
     gap: 10px;
     margin: 10px;
+    max-height: 100vh; /* ocupa a altura da tela */
 }
 
 .grid_fsf > div {
@@ -59,6 +60,7 @@ img {
     text-align: center; 
     margin-bottom: 15px; 
     color: #333;
+    flex-shrink: 0;
 }
 
 .grid_fsf > div > h3 {
@@ -83,30 +85,39 @@ img {
 
 .grid_fsf > div.column0 {
     grid-column: 1 / 4;
-    display: block;  
+    display: block;
+    overflow: hidden;
 }
 
 .grid_fsf > div.column1 {
     grid-column: 1;
     grid-row: 2 / 4;
+    max-height: 100%;
+    overflow: hidden;
     display: block;  
 }
 
 .grid_fsf > div.column2 {
     grid-column: 2;
     grid-row: 2 / 4;
+    max-height: 100%;
+    overflow: hidden;    
     display: block;
 }
 
 .grid_fsf > div.column3 {
     grid-column: 3;
     grid-row: 2/3;
+    max-height: 100%;
+    overflow: hidden;    
     display: block;
 }
 
 .grid_fsf > div.column4 {
     grid-column: 3;
     grid-row: 3/4;
+    max-height: 100%;
+    overflow: hidden;    
     display: block;
 }
 
@@ -118,6 +129,9 @@ img {
 }
 
 .pedido-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     list-style: none;
     background-color: white;
     padding: 0;
@@ -129,6 +143,8 @@ img {
     background-color: white;
     padding: 0;
     margin: 0 0 0 10px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .item {
