@@ -137,7 +137,7 @@
             itens.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'item';
-                li.textContent = `📦 - ${item.quantidade}x ${item.produto}`;
+                li.textContent = `📦 - ${parseInt(item.quantidade)}x ${item.produto}`;
                 list.appendChild(li);
             });
             // container.style.display = 'grid';
