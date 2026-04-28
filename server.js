@@ -196,7 +196,7 @@ app.get('/cliente', (req, res) => {
 });
 
 // Página - serve dashboard.html
-app.get('/dashboard', (req, res) => {
+app.get('/dashboard', adminAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
