@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard MEG</title>
+    <link rel="icon" type="image/png" href="./images/favicon_midilabs.png" />
+    <Link rel="stylesheet" href="./style.css"/>
+
+    <!-- Charts + PDF -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet" />
+
+  </head>
+
+  <body>
+    <h1>📊 Dashboard de Pedidos - Mercado Guarará</h1>
+    <p class="hint">
+      Esta versão acessa os dados diretamente da base de dados não necessitando mais o uso da planilha do Google Sheet.
+    </p>
+
+    <div class="buttons">
+      <button id="btnRefresh" class="primary">🔄 Atualizar do Banco</button>
+      <button id="btnTheme" class="secondary">🌗 Tema Claro/Escuro</button>
+      <button id="btnPDFItens" class="secondary">📦 PDF - Lista de Compras</button>
+      <span id="connStatus" class="status-pill">API: não verificado</span>
+    </div>
+
+    <div class="controls">
+      <div>
+        <label>Data de Início</label>
+        <input type="date" id="dateStart" />
+      </div>
+      <div>
+        <label>Data de Fim</label>
+        <input type="date" id="dateEnd" />
+      </div>
+      <div>
+        <label>Pedido</label>
+        <select id="pedidoFilter">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="statusFilter">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label>Cliente</label>
+        <select id="clientFilter">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div>
+        <label>Produto</label>
+        <select id="productFilter">
+          <option value="">Todos</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="card">
+        <div class="kpi-title">Total de Pedidos</div>
+        <div class="kpi-value" id="kpiPedidos">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Clientes Ativos</div>
+        <div class="kpi-value" id="kpiClientes">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Faturamento (R$)</div>
+        <div class="kpi-value" id="kpiFaturamento">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Itens Vendidos</div>
+        <div class="kpi-value" id="kpiItens">0</div>
+      </div>
+      <div class="card">
+        <div class="kpi-title">Ticket Médio (R$)</div>
+        <div class="kpi-value" id="kpiTicket">0</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pedidos</h3>
+      <p class="note">Dica: clique em “Atualizar do Banco” para carregar <b>tudo</b>. Depois use os filtros (locais) quantas vezes quiser — sem nova consulta.</p>
+      <table id="tblPedidos">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Itens</h3>
+      <table id="tblItens">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Pedido</th>
+            <th>Produto</th>
+            <th>Preço</th>
+            <th>Qtd</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Evolução de Pedidos e Faturamento</h3>
+      <canvas id="timeChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Distribuição por Status</h3>
+      <canvas id="statusChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Top Produtos</h3>
+      <canvas id="prodChart"></canvas>
+    </div>
+    <div class="card">
+      <h3>Top Clientes</h3>
+      <canvas id="clientChart"></canvas>
+    </div>
+
+
+    
+    <script>
+      // =====================
+      // Helpers (números / datas)
+      // =====================
+      const pick = (obj, ...keys) => {
+        for (const k of keys) {
+          if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k];
+        }
+        return null;
+      };
+
+      const toNumber = (v) => {
+        if (v === undefined || v === null) return 0;
+        if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+        if (typeof v === "bigint") return Number(v);
+        if (typeof v !== "string") return 0;
+
+        let s = v.trim();
+        if (!s) return 0;
+
+        // remove moeda e espaços
+        s = s.replace(/R\$\s?/gi, "").replace(/\s+/g, "");
+        // mantém apenas dígitos, ponto, vírgula e sinal
+        s = s.replace(/[^0-9,\.\-]/g, "");
+
+        // pt-BR: 1.234,56
+        if (s.includes(",") && s.includes(".")) {
+          s = s.replace(/\./g, "").replace(/,/g, ".");
+        } else if (s.includes(",")) {
+          s = s.replace(/,/g, ".");
+        }
+
+        const n = parseFloat(s);
+        return Number.isFinite(n) ? n : 0;
+      };
+
+      const fmtMoney = (v) =>
+        toNumber(v).toLocaleString("pt-BR", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+
+      const fmtQty = (v) => {
+        const n = toNumber(v);
+        // mostra sem casas se for inteiro
+        if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+        return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      };
+
+      const parseD = (s) => {
+        if (!s) return null;
+        const d = new Date(s);
+        return isNaN(d) ? null : d;
+      };
+
+      // =====================
+      // Estado (dados completos do banco)
+      // =====================
+      let ALL_PEDIDO = [];
+      let ALL_ITEM = [];
+
+      // Recorte atual (apenas filtros no frontend)
+      let TB_PEDIDO = [];
+      let TB_ITEM = [];
+
+      const pedidoFilter = document.getElementById("pedidoFilter");
+      const statusFilter = document.getElementById("statusFilter");
+      const clientFilter = document.getElementById("clientFilter");
+      const productFilter = document.getElementById("productFilter");
+      const connStatus = document.getElementById("connStatus");
+
+      let timeChart, statusChart, prodChart, clientChart;
+
+      // =====================
+      // UI actions
+      // =====================
+      document.getElementById("btnTheme").onclick = () => document.body.classList.toggle("light");
+
+      // Sempre busca TODOS os registros do banco
+      document.getElementById("btnRefresh").onclick = async () => {
+        await fetchDataFromAPI();
+        initFilters({ preserveSelection: true });
+
+        // se o usuário ainda não escolheu datas, tenta preencher com min/max do dataset
+        const dsEl = document.getElementById("dateStart");
+        const deEl = document.getElementById("dateEnd");
+        if (!dsEl.value || !deEl.value) {
+          const dates = ALL_PEDIDO.map((p) => parseD(pick(p, "data", "DATA"))).filter(Boolean);
+          if (dates.length) {
+            const min = new Date(Math.min(...dates.map((d) => d.getTime())));
+            const max = new Date(Math.max(...dates.map((d) => d.getTime())));
+	      	      // Use local date parts (avoid UTC shift from toISOString)
+	      	      const isoLocal = (d) => {
+	      	        const y = d.getFullYear();
+	      	        const m = String(d.getMonth() + 1).padStart(2, "0");
+	      	        const day = String(d.getDate()).padStart(2, "0");
+	      	        return `${y}-${m}-${day}`;
+	      	      };
+	      	      if (!dsEl.value) dsEl.value = isoLocal(min);
+	      	      if (!deEl.value) deEl.value = isoLocal(max);
+          }
+        }
+
+        applyFilters();
+      };
+
+      // aplicar filtros (somente frontend)
+      [pedidoFilter, statusFilter, clientFilter, productFilter, document.getElementById("dateStart"), document.getElementById("dateEnd")].forEach((el) => {
+        el.addEventListener("change", () => applyFilters());
+      });
+
+
+      // =====================
+      // Fetch API (sem filtros)
+      // =====================
+      async function fetchDataFromAPI() {
+        connStatus.textContent = "API: carregando...";
+        try {
+          const res = await fetch("/api/meg/dashboard");
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          ALL_PEDIDO = Array.isArray(data.pedidos) ? data.pedidos : [];
+          ALL_ITEM = Array.isArray(data.itens) ? data.itens : [];
+
+          connStatus.textContent = `API: ok (${ALL_PEDIDO.length} pedidos)`;
+        } catch (e) {
+          console.error(e);
+          connStatus.textContent = "API: erro";
+          alert("Não foi possível carregar dados do servidor. Verifique o server Node/Express e a rota /api/meg/dashboard.");
+          ALL_PEDIDO = [];
+          ALL_ITEM = [];
+        }
+      }
+
+      // =====================
+      // Inicializar filtros (SEMPRE com base no dataset completo)
+      // =====================
+      function initFilters({ preserveSelection } = { preserveSelection: false }) {
+        const current = {
+          pedidoId: pedidoFilter.value,
+          status: statusFilter.value,
+          client: clientFilter.value,
+          product: productFilter.value,
+        };
+
+        pedidoFilter.innerHTML = '<option value="">Todos</option>';
+        statusFilter.innerHTML = '<option value="">Todos</option>';
+        clientFilter.innerHTML = '<option value="">Todos</option>';
+        productFilter.innerHTML = '<option value="">Todos</option>';
+
+        const sSet = new Set();
+        const cSet = new Set();
+        const pSet = new Set();
+        const idSet = new Set();
+
+        ALL_PEDIDO.forEach((p) => {
+          const STATUS = pick(p, "status", "STATUS");
+          const ID = pick(p, "id", "ID");
+          const CLIENTE = pick(p, "cliente", "CLIENTE");
+          const NOME = pick(p, "nome", "NOME") || "";
+
+          if (STATUS) sSet.add(String(STATUS));
+          if (CLIENTE) cSet.add(`${CLIENTE}/${NOME}`);
+          if (ID !== null && ID !== undefined) idSet.add(String(ID));
+        });
+
+        ALL_ITEM.forEach((i) => {
+          const PRODUTO = pick(i, "produto", "PRODUTO");
+          if (PRODUTO) pSet.add(String(PRODUTO));
+        });
+
+        [...idSet]
+          .sort((a, b) => Number(a) - Number(b))
+          .forEach((v) => {
+            const o = document.createElement("option");
+            o.value = v;
+            o.text = v;
+            pedidoFilter.appendChild(o);
+          });
+
+        [...sSet].sort().forEach((v) => {
+          const o = document.createElement("option");
+          o.value = v;
+          o.text = v;
+          statusFilter.appendChild(o);
+        });
+
+        [...cSet].sort().forEach((v) => {
+          const o = document.createElement("option");
+          o.value = v;
+          o.text = v;
+          clientFilter.appendChild(o);
+        });
+
+        [...pSet].sort().forEach((v) => {
+          const o = document.createElement("option");
+          o.value = v;
+          o.text = v;
+          productFilter.appendChild(o);
+        });
+
+        if (preserveSelection) {
+          if (current.pedidoId && [...pedidoFilter.options].some((o) => o.value === current.pedidoId)) pedidoFilter.value = current.pedidoId;
+          if (current.status && [...statusFilter.options].some((o) => o.value === current.status)) statusFilter.value = current.status;
+          if (current.client && [...clientFilter.options].some((o) => o.value === current.client)) clientFilter.value = current.client;
+          if (current.product && [...productFilter.options].some((o) => o.value === current.product)) productFilter.value = current.product;
+        }
+      }
+
+      // =====================
+      // Aplicar filtros (somente frontend)
+      // =====================
+      function applyFilters() {
+        const pid = pedidoFilter.value;
+        const dsRaw = document.getElementById("dateStart").value;
+        const deRaw = document.getElementById("dateEnd").value;
+        // IMPORTANT: input[type=date] returns "YYYY-MM-DD".
+        // In many browsers, new Date("YYYY-MM-DD") is parsed as UTC,
+        // which can shift the date in timezones like -03:00 and cause
+        // off-by-one-day filtering.
+        const parseDateInputLocal = (iso) => {
+          if (!iso) return null;
+          const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (!m) return null;
+          const y = Number(m[1]);
+          const mo = Number(m[2]);
+          const d = Number(m[3]);
+          return new Date(y, mo - 1, d, 0, 0, 0, 0); // local midnight
+        };
+
+        const ds = parseDateInputLocal(dsRaw);
+        const de = parseDateInputLocal(deRaw);
+        const st = statusFilter.value;
+        const cl = (clientFilter.value || "").split("/")[0];
+        const pr = productFilter.value;
+
+        let pedidos;
+        if (pid) {
+          pedidos = ALL_PEDIDO.filter((p) => String(pick(p, "id", "ID")) === String(pid));
+        } else {
+          pedidos = ALL_PEDIDO.filter((p) => {
+            const d = parseD(pick(p, "data", "DATA"));
+            const STATUS = pick(p, "status", "STATUS");
+            const CLIENTE = pick(p, "cliente", "CLIENTE");
+
+            // end date must be inclusive (end of day)
+            const deEnd = de ? new Date(de.getFullYear(), de.getMonth(), de.getDate(), 23, 59, 59, 999) : null;
+            return (
+              (!ds || (d && d >= ds)) &&
+              (!deEnd || (d && d <= deEnd)) &&
+              (!st || String(STATUS || "") === st) &&
+              (!cl || String(CLIENTE || "") === cl)
+            );
+          });
+        }
+
+        const ids = new Set(pedidos.map((p) => String(pick(p, "id", "ID"))));
+        let itens = ALL_ITEM.filter((i) => {
+          const pedidoId = pick(i, "pedido_id", "PEDIDO_ID", "pedidoId");
+          const prod = pick(i, "produto", "PRODUTO");
+          return ids.has(String(pedidoId)) && (!pr || String(prod || "") === pr);
+        });
+
+        itens = itens.sort((a, b) => String(pick(a, "pedido_id", "PEDIDO_ID") || "").localeCompare(String(pick(b, "pedido_id", "PEDIDO_ID") || "")));
+
+        TB_PEDIDO = pedidos;
+        TB_ITEM = itens;
+
+        renderKPIs(pedidos, itens);
+        renderTables(pedidos, itens);
+        renderCharts(pedidos, itens);
+
+        window.filtered = { pedidos, itens };
+      }
+
+      // =====================
+      // Render
+      // =====================
+      function renderKPIs(pedidos, itens) {
+        document.getElementById("kpiPedidos").textContent = String(pedidos.length);
+        document.getElementById("kpiClientes").textContent = String(new Set(pedidos.map((p) => pick(p, "cliente", "CLIENTE"))).size);
+
+        const fat = pedidos.reduce((s, p) => s + toNumber(pick(p, "total", "TOTAL")), 0);
+        document.getElementById("kpiFaturamento").textContent = fmtMoney(fat);
+
+        const qtd = itens.reduce((s, i) => s + toNumber(pick(i, "quantidade", "QUANTIDADE")), 0);
+        document.getElementById("kpiItens").textContent = fmtQty(qtd);
+
+        document.getElementById("kpiTicket").textContent = fmtMoney(pedidos.length ? fat / pedidos.length : 0);
+      }
+
+      function renderTables(pedidos, itens) {
+        const tp = document.querySelector("#tblPedidos tbody");
+        tp.innerHTML = pedidos
+          .map((p) => {
+            const d = parseD(pick(p, "data", "DATA"));
+            const id = pick(p, "id", "ID");
+            const cli = pick(p, "cliente", "CLIENTE");
+            const nome = pick(p, "nome", "NOME") || "";
+            const total = pick(p, "total", "TOTAL");
+            const st = pick(p, "status", "STATUS") || "";
+            const disabled = String(st).toUpperCase() === "ENTREGUE" ? "disabled" : "";
+            const btnText = String(st).toUpperCase() === "ENTREGUE" ? "Entregue" : "Marcar ENTREGUE";
+            return `<tr data-pedido-id="${id ?? ""}">
+              <td>${d ? d.toLocaleDateString("pt-BR") : ""}</td>
+              <td>${id ?? ""}</td>
+              <td>${cli ?? ""} (${nome})</td>
+              <td style='text-align:right'>${fmtMoney(total)}</td>
+              <td class="pedido-status">${st}</td>
+              <td><button class="btn-deliver" data-action="deliver" data-id="${id ?? ""}" ${disabled}>${btnText}</button></td>
+            </tr>`;
+          })
+          .join("");
+
+        const ti = document.querySelector("#tblItens tbody");
+        ti.innerHTML = itens
+          .map((i) => {
+            const d = parseD(pick(i, "data", "DATA"));
+            const pid = pick(i, "pedido_id", "PEDIDO_ID", "pedidoId");
+            const prod = pick(i, "produto", "PRODUTO") || "";
+            const preco = pick(i, "preco", "PRECO");
+            const qtd = pick(i, "quantidade", "QUANTIDADE");
+            const st = pick(i, "status", "STATUS") || "";
+            return `<tr><td>${d ? d.toLocaleDateString("pt-BR") : ""}</td><td>${pid ?? ""}</td><td>${prod}</td><td style='text-align:right'>${fmtMoney(preco)}</td><td style='text-align:right'>${fmtQty(qtd)}</td><td>${st}</td></tr>`;
+          })
+          .join("");
+      }
+
+      // =====================
+      // Marcar pedido como ENTREGUE (API + update local)
+      // =====================
+      document.querySelector("#tblPedidos tbody").addEventListener("click", async (ev) => {
+        const btn = ev.target.closest("button[data-action='deliver']");
+        if (!btn) return;
+        const id = btn.getAttribute("data-id");
+        if (!id) return;
+        await markAsDelivered(id, btn);
+      });
+
+      async function markAsDelivered(pedidoId, btnEl) {
+        const pid = String(pedidoId);
+        const row = btnEl?.closest("tr");
+        const statusCell = row?.querySelector(".pedido-status");
+
+        // Confirmação simples
+        if (!confirm(`Deseja marcar o pedido ${pid} como ENTREGUE?`)) return;
+
+        // UX: desabilita durante request
+        const prevText = btnEl.textContent;
+        btnEl.disabled = true;
+        btnEl.textContent = "Salvando...";
+
+        try {
+          const res = await fetch(`/api/meg/pedido/${encodeURIComponent(pid)}/entregar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+          if (!res.ok) {
+            let msg = `HTTP ${res.status}`;
+            try {
+              const j = await res.json();
+              if (j && j.error) msg = j.error;
+            } catch {}
+            throw new Error(msg);
+          }
+          const updated = await res.json();
+
+          // Atualiza status localmente (ALL_PEDIDO)
+          const newStatus = (updated && updated.status) ? String(updated.status) : "ENTREGUE";
+          const p = ALL_PEDIDO.find((x) => String(pick(x, "id", "ID")) === pid);
+          if (p) {
+            if (p.status !== undefined) p.status = newStatus;
+            if (p.STATUS !== undefined) p.STATUS = newStatus;
+          }
+
+          // Atualiza célula e botão na tabela (não precisa recarregar do banco)
+          if (statusCell) statusCell.textContent = newStatus;
+          btnEl.textContent = "Entregue";
+          btnEl.disabled = true;
+
+          // Recalcula KPIs/gráficos conforme filtros atuais
+          applyFilters();
+        } catch (e) {
+          console.error(e);
+          alert(`Não foi possível marcar como ENTREGUE: ${e.message || e}`);
+          btnEl.disabled = false;
+          btnEl.textContent = prevText;
+        }
+      }
+
+      function renderCharts(pedidos, itens) {
+        const byDate = {};
+        pedidos.forEach((p) => {
+          const d0 = parseD(pick(p, "data", "DATA"));
+          if (!d0) return;
+          const d = d0.toISOString().slice(0, 10);
+          if (!byDate[d]) byDate[d] = { o: 0, r: 0 };
+          byDate[d].o++;
+          byDate[d].r += toNumber(pick(p, "total", "TOTAL"));
+        });
+
+        const labels = Object.keys(byDate).sort();
+        const o = labels.map((d) => byDate[d].o);
+        const r = labels.map((d) => byDate[d].r);
+
+        const bySt = {};
+        pedidos.forEach((p) => {
+          const st = String(pick(p, "status", "STATUS") || "SEM STATUS");
+          bySt[st] = (bySt[st] || 0) + 1;
+        });
+
+        const byProd = {};
+        itens.forEach((i) => {
+          const prod = String(pick(i, "produto", "PRODUTO") || "SEM PRODUTO");
+          byProd[prod] = (byProd[prod] || 0) + toNumber(pick(i, "quantidade", "QUANTIDADE"));
+        });
+
+        const topP = Object.entries(byProd)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+
+        const byCli = {};
+        pedidos.forEach((p) => {
+          const cli = String(pick(p, "cliente", "CLIENTE") || "SEM CLIENTE");
+          byCli[cli] = (byCli[cli] || 0) + toNumber(pick(p, "total", "TOTAL"));
+        });
+
+        const topC = Object.entries(byCli)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+
+        [timeChart, statusChart, prodChart, clientChart].forEach((c) => c && c.destroy());
+
+        timeChart = new Chart(document.getElementById("timeChart"), {
+          type: "bar",
+          data: {
+            labels,
+            datasets: [
+              { label: "Pedidos", data: o },
+              { label: "Faturamento (R$)", data: r, type: "line", yAxisID: "y1" },
+            ],
+          },
+          options: {
+            scales: {
+              y: { beginAtZero: true },
+              y1: { beginAtZero: true, position: "right" },
+            },
+          },
+        });
+
+        statusChart = new Chart(document.getElementById("statusChart"), {
+          type: "doughnut",
+          data: { labels: Object.keys(bySt), datasets: [{ data: Object.values(bySt) }] },
+        });
+
+        prodChart = new Chart(document.getElementById("prodChart"), {
+          type: "bar",
+          data: {
+            labels: topP.map((e) => e[0]),
+            datasets: [{ label: "Qtd", data: topP.map((e) => e[1]) }],
+          },
+          options: { indexAxis: "y" },
+        });
+
+        clientChart = new Chart(document.getElementById("clientChart"), {
+          type: "bar",
+          data: {
+            labels: topC.map((e) => e[0]),
+            datasets: [{ label: "Faturamento (R$)", data: topC.map((e) => e[1]) }],
+          },
+          options: { indexAxis: "y" },
+        });
+      }
+
+      // =====================
+      // PDF
+      // =====================
+      document.getElementById("btnPDFItens").onclick = () => {
+        if (!window.filtered || window.filtered.pedidos.length === 0) {
+          alert("Nenhum pedido encontrado para gerar o PDF.");
+          return;
+        }
+
+        const pedidos = window.filtered.pedidos;
+        const itens = window.filtered.itens;
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF();
+
+        pedidos.forEach((pedido, idx) => {
+          if (idx > 0) pdf.addPage();
+
+          const pedidoId = pick(pedido, "id", "ID");
+          const cliente = pick(pedido, "cliente", "CLIENTE") || "";
+          const nome = pick(pedido, "nome", "NOME") || "";
+          const endereco = pick(pedido, "endereco", "ENDERECO") || "Não informado";
+          const total = pick(pedido, "total", "TOTAL");
+          const data = pick(pedido, "data", "DATA");
+          const status = pick(pedido, "status", "STATUS") || "";
+
+          pdf.setFontSize(14);
+          pdf.setFont(undefined, "bold");
+          pdf.text(`Pedido: ${pedidoId}`, 10, 15);
+
+          pdf.setFontSize(11);
+          pdf.setFont(undefined, "normal");
+          pdf.text(`Cliente: ${cliente} - (${nome})`, 10, 25);
+          pdf.text(`Data: ${data ? new Date(data).toLocaleDateString("pt-BR") : ""}`, 10, 32);
+          pdf.text(`Status: ${status}`, 10, 39);
+          pdf.text(`Endereço: ${endereco}`, 10, 46);
+          pdf.text(`Total do Pedido: R$ ${toNumber(total).toFixed(2)}`, 10, 53);
+
+          pdf.setFillColor(200, 200, 200);
+          pdf.rect(10, 60, 190, 8, "F");
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(11);
+          pdf.setFont(undefined, "bold");
+          pdf.text("PRODUTO", 12, 65);
+          pdf.text("QTD.", 150, 65);
+          pdf.text("R$ UNITÁRIO", 200, 65, null, null, "right");
+
+          let y = 73;
+          let toggle = false;
+
+          const itensPedido = itens.filter((i) => String(pick(i, "pedido_id", "PEDIDO_ID", "pedidoId")) === String(pedidoId));
+
+          itensPedido.forEach((i) => {
+            if (toggle) {
+              pdf.setFillColor(240, 240, 240);
+              pdf.rect(10, y - 5, 190, 8, "F");
+            }
+            toggle = !toggle;
+
+            pdf.setTextColor(0, 0, 0);
+            pdf.setFont(undefined, "normal");
+
+            const prod = String(pick(i, "produto", "PRODUTO") || "");
+            const qtd = pick(i, "quantidade", "QUANTIDADE");
+            const preco = pick(i, "preco", "PRECO");
+
+            pdf.text(prod, 12, y);
+            pdf.text(fmtQty(qtd), 150, y);
+            pdf.text(`R$ ${toNumber(preco).toFixed(2)}`, 200, y, null, null, "right");
+
+            y += 8;
+            if (y > 270) {
+              pdf.addPage();
+              y = 20;
+              toggle = false;
+            }
+          });
+        });
+
+        pdf.save("lista_compras.pdf");
+      };
+
+      // =====================
+      // Boot
+      // =====================
+      // carrega automaticamente ao abrir a página
+      (async () => {
+        await fetchDataFromAPI();
+        initFilters({ preserveSelection: false });
+        // tenta aplicar data min/max no primeiro load
+        const dsEl = document.getElementById("dateStart");
+        const deEl = document.getElementById("dateEnd");
+        const dates = ALL_PEDIDO.map((p) => parseD(pick(p, "data", "DATA"))).filter(Boolean);
+        if (dates.length) {
+          const min = new Date(Math.min(...dates.map((d) => d.getTime())));
+          const max = new Date(Math.max(...dates.map((d) => d.getTime())));
+          const iso = (d) => d.toISOString().slice(0, 10);
+          if (!dsEl.value) dsEl.value = iso(min);
+          if (!deEl.value) deEl.value = iso(max);
+        }
+        applyFilters();
+      })();
+    </script>
+
+  </body>
+</html>
