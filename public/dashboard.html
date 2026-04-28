@@ -258,7 +258,7 @@
       async function fetchDataFromAPI() {
         connStatus.textContent = "API: carregando...";
         try {
-          const res = await fetch("/api/meg/dashboard");
+          const res = await fetch("/api/dashboard");
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
 
@@ -269,7 +269,7 @@
         } catch (e) {
           console.error(e);
           connStatus.textContent = "API: erro";
-          alert("Não foi possível carregar dados do servidor. Verifique o server Node/Express e a rota /api/meg/dashboard.");
+          alert("Não foi possível carregar dados do servidor. Verifique o server Node/Express e a rota /api/dashboard.");
           ALL_PEDIDO = [];
           ALL_ITEM = [];
         }
@@ -494,7 +494,7 @@
         btnEl.textContent = "Salvando...";
 
         try {
-          const res = await fetch(`/api/meg/pedido/${encodeURIComponent(pid)}/entregar`, {
+          const res = await fetch(`/api/pedido/${encodeURIComponent(pid)}/entregar`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({}),
