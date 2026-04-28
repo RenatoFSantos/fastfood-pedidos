@@ -25,6 +25,92 @@ const adminAuth = basicAuth({
   unauthorizedResponse: getUnauthorizedResponse
 });
 
+app.get('/api/dashboard', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+
+  const dateStart = isoDateOnly(req.query.dateStart);
+  const dateEnd = isoDateOnly(req.query.dateEnd);
+  const status = (req.query.status || 'AGUARDANDO ENTREGA').toString().trim();
+  const cliente = (req.query.cliente || '').toString().trim();
+  const pedidoId = (req.query.pedidoId || '').toString().trim();
+  const produto = (req.query.produto || '').toString().trim();
+
+  try {
+    // Monta filtros com parâmetros
+    const where = [];
+    const params = [];
+
+    // Datas (inclusivo no fim: usa < end + 1 dia)
+    if (dateStart) {
+      params.push(dateStart);
+      where.push(`data >= $${params.length}::date`);
+    }
+    if (dateEnd) {
+      params.push(dateEnd);
+      // < end + 1 dia
+      where.push(`data < ($${params.length}::date + interval '1 day')`);
+    }
+
+    if (status) {
+      params.push(status);
+      where.push(`status = $${params.length}`);
+    }
+
+    if (cliente) {
+      params.push(cliente);
+      where.push(`cliente = $${params.length}`);
+    }
+
+    if (pedidoId) {
+      const pidNum = Number(pedidoId);
+      if (!Number.isFinite(pidNum)) {
+        return res.status(400).json({ error: 'pedidoId inválido' });
+      }
+      params.push(pidNum);
+      where.push(`id = $${params.length}`);
+    }
+
+    const sqlPedidos = `
+      SELECT id, data, cliente, nome, endereco, total, status, step
+      FROM fsf_pedido
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY data ASC, id ASC
+    `;
+
+    const pedidosResult = await pool.query(sqlPedidos, params);
+    const pedidos = pedidosResult.rows;
+
+    // Itens
+    let itens = [];
+    if (pedidos.length) {
+      const ids = pedidos.map(p => p.id);
+      const itParams = [ids];
+      let itWhere = `pedido_id = ANY($1::int[])`;
+
+      if (produto) {
+        itParams.push(produto);
+        itWhere += ` AND produto = $2`;
+      }
+
+      const sqlItens = `
+        SELECT id, data, produto, preco, quantidade, status, pedido_id
+        FROM fsf_pedido_item
+        WHERE ${itWhere}
+        ORDER BY data ASC, pedido_id ASC
+      `;
+
+      const itensResult = await pool.query(sqlItens, itParams);
+      itens = itensResult.rows;
+    }
+
+    return res.json({ pedidos, itens });
+  } catch (err) {
+    console.error('Erro /api/dashboard:', err);
+    return res.status(500).json({ error: 'Erro interno ao buscar dados do dashboard' });
+  }
+});
+
+
 // Rota para buscar pedidos (pública, usada por ambas as views)
 app.get('/api/pedidos', async (req, res) => {
   // Força o Content-Type para JSON para evitar problemas de renderização
