@@ -102,6 +102,11 @@ app.get('/cliente', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'cliente.html'));
 });
 
+// Página cliente (pública) - serve cliente.html sem setas
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
 // Redireciona raiz para cliente (opcional)
 app.get('/', (req, res) => {
   res.redirect('/cliente');
