@@ -12,6 +12,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Conexão com PostgreSQL (já configurada via env vars)
 const pool = new Pool();
 
+function isoDateOnly(d) {
+  // YYYY-MM-DD
+  if (!d) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return null;
+  return String(d);
+}
+
 const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
 
 // Autenticação básica para admin (mude para sua senha real)
