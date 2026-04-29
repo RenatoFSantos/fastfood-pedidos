@@ -88,7 +88,6 @@ img {
 
 .grid_fsf > div > ul > li {
   background-color: white;
-  margin-right: 5px;
   margin-bottom: 10px;
   border-radius: 5px;
   text-align: left;
@@ -301,7 +300,8 @@ img {
 }
 .column li { 
     background: #eee; 
-    margin-bottom: 10px; 
+    margin-bottom: 10px;
+    margin-right: 3px; 
     padding: 12px; 
     border-radius: 5px; 
     text-align: center; 
