@@ -19,7 +19,7 @@ function isoDateOnly(d) {
   return String(d);
 }
 
-const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO'];
+const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO', 'CANCELADO', 'ENTREGUE'];
 
 // Autenticação básica para admin (mude para sua senha real)
 const getUnauthorizedResponse = (req) => {
@@ -84,6 +84,8 @@ app.get('/api/dashboard', async (req, res) => {
       ORDER BY data ASC, id ASC
     `;
 
+    console.log('sqlPedidos=', sqlPedidos);
+
     const pedidosResult = await pool.query(sqlPedidos, params);
     const pedidos = pedidosResult.rows;
 
@@ -126,7 +128,7 @@ app.get('/api/pedidos', async (req, res) => {
     const result = await pool.query(`
       SELECT id, data, cliente, nome, endereco, total, status, step
       FROM fsf_pedido 
-      WHERE status IN ('AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO')
+      WHERE status IN ('AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO', 'CANCELADO')
       ORDER BY id
     `);
     res.json(result.rows);
