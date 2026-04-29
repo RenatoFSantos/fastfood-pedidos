@@ -85,6 +85,8 @@ app.get('/api/dashboard', async (req, res) => {
     `;
 
     console.log('sqlPedidos=', sqlPedidos);
+    console.log('Params=', params);
+    console.log('Where=', where);
 
     const pedidosResult = await pool.query(sqlPedidos, params);
     const pedidos = pedidosResult.rows;
