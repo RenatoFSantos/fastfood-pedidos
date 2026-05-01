@@ -656,15 +656,15 @@
           pdf.text(`Forma de Pagamento: [  ] Débito  [  ] Crédito  [  ] Dinheiro`, 10, 67);
 
           pdf.setFillColor(200, 200, 200);
-          pdf.rect(10, 60, 190, 8, "F");
+          pdf.rect(10, 74, 190, 8, "F");
           pdf.setTextColor(0, 0, 0);
           pdf.setFontSize(11);
           pdf.setFont(undefined, "bold");
-          pdf.text("PRODUTO", 12, 65);
-          pdf.text("QTD.", 150, 65);
-          pdf.text("R$ UNITÁRIO", 200, 65, null, null, "right");
+          pdf.text("PRODUTO", 12, 79);
+          pdf.text("QTD.", 150, 79);
+          pdf.text("R$ UNITÁRIO", 200, 79, null, null, "right");
 
-          let y = 97;
+          let y = 86;
           let toggle = false;
 
           const itensPedido = itens.filter((i) => String(pick(i, "pedido_id", "PEDIDO_ID", "pedidoId")) === String(pedidoId));
