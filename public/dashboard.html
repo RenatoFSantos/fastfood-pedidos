@@ -652,6 +652,8 @@
           pdf.text(`Status: ${status}`, 10, 39);
           pdf.text(`Endereço: ${endereco}`, 10, 46);
           pdf.text(`Total do Pedido: R$ ${toNumber(total).toFixed(2)}`, 10, 53);
+          pdf.text(`Pago?: [  ] Sim  [  ] Não`, 10, 60);
+          pdf.text(`Forma de Pagamento: [  ] Débito  [  ] Crédito  [  ] Dinheiro`, 10, 67);
 
           pdf.setFillColor(200, 200, 200);
           pdf.rect(10, 60, 190, 8, "F");

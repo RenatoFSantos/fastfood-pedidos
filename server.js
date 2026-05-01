@@ -19,7 +19,7 @@ function isoDateOnly(d) {
   return String(d);
 }
 
-const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CONCLUIDO', 'CANCELADO', 'ENTREGUE'];
+const STATUS_POSSIVEIS = ['AGUARDANDO PREPARO', 'EM PREPARO', 'CANCELADO', 'ENTREGUE'];
 
 // Autenticação básica para admin (mude para sua senha real)
 const getUnauthorizedResponse = (req) => {
