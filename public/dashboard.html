@@ -263,7 +263,7 @@
           const data = await res.json();
 
           ALL_PEDIDO = Array.isArray(data.pedidos) ? data.pedidos : [];
-          ALL_ITEM = Array.isArray(data.itens) ? data.itens.sort((a, b) => b.pedidoId - a.pedidoId) : [];
+          ALL_ITEM = Array.isArray(data.itens) ? data.itens.sort((a, b) => Number(b.pedidoId) - Number(a.pedidoId)) : [];
 
           connStatus.textContent = `API: ok (${ALL_PEDIDO.length} pedidos)`;
         } catch (e) {
