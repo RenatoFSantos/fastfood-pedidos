@@ -263,7 +263,7 @@
           const data = await res.json();
 
           ALL_PEDIDO = Array.isArray(data.pedidos) ? data.pedidos : [];
-          ALL_ITEM = Array.isArray(data.itens) ? data.itens.sort((a, b) => Number(b.pedidoId) - Number(a.pedidoId)) : [];
+          ALL_ITEM = Array.isArray(data.itens) ? data.itens : [];
 
           connStatus.textContent = `API: ok (${ALL_PEDIDO.length} pedidos)`;
         } catch (e) {
@@ -404,7 +404,7 @@
           return ids.has(String(pedidoId)) && (!pr || String(prod || "") === pr);
         });
 
-        itens = itens.sort((a, b) => String(pick(a, "pedido_id", "PEDIDO_ID") || "").localeCompare(String(pick(b, "pedido_id", "PEDIDO_ID") || "")));
+        itens = itens.sort((a, b) => Number(pick(a, "pedido_id", "PEDIDO_ID") || "").localeCompare(Number(pick(b, "pedido_id", "PEDIDO_ID") || "")));
 
         TB_PEDIDO = pedidos;
         TB_ITEM = itens;
