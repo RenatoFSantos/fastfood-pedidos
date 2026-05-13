@@ -98,7 +98,7 @@ img {
 .grid_fsf > div.column0 {
   grid-column: 1 / 4;
   display: block;
-  overflow: hidden;
+  overflow: scroll;
 }
 
 .grid_fsf > div > div.headtitle {
