@@ -104,7 +104,7 @@
                     <span class="arrow ${STATUS_MAP[pedido.status] === 2 ? 'disabled' : ''}" data-direction="right">&gt;</span>
                 `;
                 const targetColumn = pedido.status === 'AGUARDANDO PREPARO' ? 'aguardando' :
-                                     pedido.status === 'EM PREPARO' ? 'em-preparo' : 'concluido';
+                                     pedido.status === 'EM PREPARO' ? 'em-preparo' : 'CONCLUIDO';
                 columns[targetColumn].appendChild(li);
 
                 li.querySelector('.pedido-id').addEventListener('click', () => {

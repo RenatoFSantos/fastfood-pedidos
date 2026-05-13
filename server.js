@@ -171,14 +171,18 @@ app.post('/api/update-status', adminAuth, async (req, res) => {
     return res.status(400).json({ error: 'Status inválido' });
   }
   try {
-    const result = await pool.query(
+    const result_pedido = await pool.query(
       `UPDATE fsf_pedido SET status = $1 WHERE id = $2 RETURNING id, status`,
       [novoStatus, id]
     );
-    if (result.rowCount === 0) {
+    const result_itens = await pool.query(
+      `UPDATE fsf_pedido_item SET status = $1 WHERE pedido_id = $2 RETURNING id, status`,
+      [novoStatus, id]
+    );
+    if (result_pedido.rowCount === 0) {
       return res.status(404).json({ error: 'Pedido não encontrado' });
     }
-    res.json(result.rows[0]);
+    res.json(result_pedido.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Erro ao atualizar status' });
