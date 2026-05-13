@@ -163,7 +163,7 @@
                     body: JSON.stringify({ id, novoStatus })
                 });
                 if (!response.ok) throw new Error('Erro ao atualizar status');
-                fetchPedidos(); // Atualiza a lista imediatamente
+                fetchPedidos();
             } catch (err) {
                 console.error(err);
             }
