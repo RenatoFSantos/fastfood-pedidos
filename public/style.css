@@ -9,7 +9,8 @@ p {
   background-color: #f4f4f4;
   color: #333;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
+  height: 100vh;
 }
 
 a {
